@@ -5,6 +5,7 @@ import threading
 from cachetools import cached, TTLCache
 from keystoneclient.v3 import client as keystoneclient
 from neutronclient.v2_0 import client as neutronclient
+from novaclient import client as novaclient
 from keystoneauth1.loading import cli
 from keystoneauth1 import session
 
@@ -36,6 +37,18 @@ class OpenstackHelper:
         session = self.get_session(self.args)
         return neutronclient.Client(session=session,
                                     interface=self.args.interface)
+
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def get_novaclient(self):
+        session = self.get_session(self.args)
+        return novaclient.Client("2.1", session=session,
+                                 endpoint_type=args.interface + 'URL')
+
+    
+    def get_placementapi(self):
+        session = self.get_session(self.args)
+        ks_filter = {'service_type': 'placement', 'interface': self.args.interface}
+        return placementclient(session=session, ks_filter=ks_filter, api_version='1.6')
 
 
     @cached(cache=TTLCache(maxsize=1024, ttl=600))

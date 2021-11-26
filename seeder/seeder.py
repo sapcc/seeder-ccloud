@@ -20,7 +20,7 @@ import sys
 # Here we import the seed_types for the SeedTypeRegistry.
 # The order of importing => order of execution 
 from seeder.openstack.role import Role
-from seeder.openstack.regions import Region
+from seeder.openstack.region import Region
 
 from seeder.seed_type_registry import SeedTypeRegistryBase
 from keystoneauth1.loading import cli
