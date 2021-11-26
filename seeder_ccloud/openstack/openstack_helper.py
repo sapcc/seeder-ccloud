@@ -1,11 +1,17 @@
 import copy
+import logging
 from datetime import datetime, timedelta
 import threading 
 
 from cachetools import cached, TTLCache
 from keystoneclient.v3 import client as keystoneclient
 from neutronclient.v2_0 import client as neutronclient
+from designateclient.v2 import client as designateclient
+from cinderclient.v3 import client as cinderclient
+from manilaclient.v2 import client as manilaclient
+from manilaclient import api_versions
 from novaclient import client as novaclient
+from osc_placement.http import SessionClient as placementclient
 from keystoneauth1.loading import cli
 from keystoneauth1 import session
 
@@ -79,7 +85,7 @@ class OpenstackHelper:
                             verify=not self.args.insecure)
 
         designate = designateclient.Client(session=sess,
-                                        endpoint_type=args.interface + 'URL',
+                                        endpoint_type=self.args.interface + 'URL',
                                         all_projects=True)
 
     @cached(cache=TTLCache(maxsize=1, ttl=60))
