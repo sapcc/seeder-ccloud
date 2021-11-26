@@ -20,8 +20,7 @@ setup(
     ],
     url='https://github.com/sapcc/seeder-ccloud',
     license='',
-    author='Rudolf Vriend',
-    author_email='rudolf.vriend@sap.com',
+    author='SAP SE',
     description='Seeder CCloud',
     entry_points = {
         "console_scripts": [
