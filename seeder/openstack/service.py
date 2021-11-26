@@ -20,8 +20,8 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 from urllib.parse import urlparse
 
 class Service(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, session):
-        self.opentack = OpenstackHelper(args, session)
+    def __init__(self, args):
+        self.opentack = OpenstackHelper(args)
 
     def seed(self, spec):
         logging.info('seeding services')
@@ -30,5 +30,5 @@ class Service(BaseRegisteredSeedTypeClass):
                 self.seed_service(service)
 
 
-    def seed_service(service, keystone):
+    def seed_service(service):
         """ seed a keystone service """

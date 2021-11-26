@@ -16,28 +16,25 @@
 
 import logging
 import argparse
+import sys
 # Here we import the seed_types for the SeedTypeRegistry.
 # The order of importing => order of execution 
 from seeder.openstack.role import Role
 from seeder.openstack.regions import Region
 
 from seeder.seed_type_registry import SeedTypeRegistryBase
-import sys
-
 from keystoneauth1.loading import cli
-from keystoneauth1 import session
 
 
 class Seeder:
     def __init__(self):
         self.args = get_args()
-        self.session = get_session(self.args)
         setup_logging(self.args)
 
         self.all_seedtypes = dict()
         for seedtype_name in SeedTypeRegistryBase.SEED_TYPE_REGISTRY:
             seedtype_class = SeedTypeRegistryBase.SEED_TYPE_REGISTRY[seedtype_name]
-            seedtype_instance = seedtype_class(self.args, self.session)
+            seedtype_instance = seedtype_class(self.args)
             self.all_seedtypes[seedtype_name] = seedtype_instance
 
     def seed_spec(self, spec):
@@ -47,12 +44,6 @@ class Seeder:
             except NotImplementedError as e:
                 logging.error('seed_type %s: method seed not implemented' %seedtype_name)
 
-
-def get_session(args):
-    plugin = cli.load_from_argparse_arguments(args)
-    return session.Session(auth=plugin,
-                           user_agent='openstack-seeder',
-                           verify=not args.insecure)
 
 def setup_logging(args):
     logging.basicConfig(

@@ -32,9 +32,8 @@ class SeedTypeRegistryBase(type):
 
 
 class BaseRegisteredSeedTypeClass(metaclass=SeedTypeRegistryBase):
-    def __init__(self, args, session):
+    def __init__(self, args):
         self.args = args
-        self.session = session
 
     def seed(self, *args, **kwargs):
         """

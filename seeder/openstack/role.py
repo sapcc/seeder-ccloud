@@ -20,8 +20,8 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 class Role(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, session):
-        self.opentack = OpenstackHelper(args, session)
+    def __init__(self, args):
+        self.opentack = OpenstackHelper(args)
 
     def seed(self, spec):
         logging.info('seeding roles')
@@ -38,17 +38,17 @@ class Role(BaseRegisteredSeedTypeClass):
 
         # todo: role.domainId ?
         if 'domainId' in role:
-            result = self.openstack.get_keystone().roles.list(name=role['name'], domain=role['domainId'])
+            result = self.openstack.get_keystoneclient().roles.list(name=role['name'], domain=role['domainId'])
         else:
-            result = self.openstack.get_keystone().roles.list(name=role['name'])
+            result = self.openstack.get_keystoneclient().roles.list(name=role['name'])
         if not result:
             logging.info("create role '%s'" % role)
-            resource = self.openstack.get_keystone().roles.create(**role)
+            resource = self.openstack.get_keystoneclient().roles.create(**role)
         else:
             resource = result[0]
             for attr in list(role.keys()):
                 if role[attr] != resource._info.get(attr, ''):
                     logging.info(
                         "%s differs. update role '%s'" % (attr, role))
-                    self.openstack.get_keystone().roles.update(resource.id, **role)
+                    self.openstack.get_keystoneclient().roles.update(resource.id, **role)
                     break

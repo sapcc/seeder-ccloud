@@ -20,8 +20,8 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 
 
 class Region(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, session):
-        self.opentack = OpenstackHelper(args, session)
+    def __init__(self, args):
+        self.opentack = OpenstackHelper(args)
    
     def seed(self, spec):
         logging.info('seeding regions')
@@ -47,13 +47,13 @@ class Region(BaseRegisteredSeedTypeClass):
             return
 
         try:
-            result = self.openstack.get_keystone().regions.get(region['id'])
-        except self.openstack.get_keystone().exception.NotFound:
+            result = self.openstack.get_keystoneclient().regions.get(region['id'])
+        except self.openstack.get_keystoneclient().exception.NotFound:
             result = None
 
         if not result:
             logging.info("create region '%s'" % region['id'])
-            self.openstack.get_keystone().regions.create(**region)
+            self.openstack.get_keystoneclient().regions.create(**region)
         else:  # wtf: why can't they deal with parent_region(_id) consistently
             wtf = region.copy()
             if 'parent_region' in wtf:
@@ -62,5 +62,5 @@ class Region(BaseRegisteredSeedTypeClass):
                 if wtf[attr] != result._info.get(attr, ''):
                     logging.info(
                         "%s differs. update region '%s'" % (attr, region))
-                    self.openstack.get_keystone().regions.update(result.id, **region)
+                    self.openstack.get_keystoneclient().regions.update(result.id, **region)
                     break

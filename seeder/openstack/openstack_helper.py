@@ -1,4 +1,3 @@
-import logging
 import copy
 from datetime import datetime, timedelta
 import threading 
@@ -6,6 +5,8 @@ import threading
 from cachetools import cached, TTLCache
 from keystoneclient.v3 import client as keystoneclient
 from neutronclient.v2_0 import client as neutronclient
+from keystoneauth1.loading import cli
+from keystoneauth1 import session
 
 lock = threading.RLock()
 
@@ -14,31 +15,37 @@ class OpenstackHelper:
     args = None
     session = None
 
-    def __new__(cls, args, session):
+    def __new__(cls, args):
         if not cls._singleton:
             cls._singleton = super(OpenstackHelper, cls).__new__(cls)
-            cls.session = session
             cls.args = args
+            cls.session = cls.get_session()
 
         return cls._singleton
     
-    def get_keystone(self):
-        return keystoneclient.Client(session=self.session,
+
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def get_keystoneclient(self):
+        session = self.get_session(self.args)
+        return keystoneclient.Client(session=session,
                                      interface=self.args.interface)
 
-    def get_neutron(self):
-        return neutronclient.Client(session=self.session,
+
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def get_neutronclient(self):
+        session = self.get_session(self.args)
+        return neutronclient.Client(session=session,
                                     interface=self.args.interface)
 
 
     @cached(cache=TTLCache(maxsize=1024, ttl=600))
     def get_role_id(self, name):
         """ get a (cached) role-id for a role name """
-        roles = self.get_keystone().roles.list(name=name)
+        roles = self.get_keystoneclient().roles.list(name=name)
         if roles:
             return roles[0].id
         else:
-            # returning none would be ssved in the cache as well
+            # returning none would be saved in the cache as well
             raise Exception("role {0} not found".format(name))
 
 
@@ -120,6 +127,7 @@ class OpenstackHelper:
         else:
             raise Exception("subnet %s/%s not found".format(project_id, name))
 
+
     @staticmethod
     def sanitize(source, keys):
         result = {}
@@ -130,6 +138,7 @@ class OpenstackHelper:
                 else:
                     result[attr] = source[attr]
         return result
+
 
     @staticmethod
     def redact(source, keys=('password', 'secret', 'userPassword', 'cam_password')):
@@ -148,3 +157,11 @@ class OpenstackHelper:
         result = copy.deepcopy(source)
         _blankout(result, keys)
         return result
+
+
+    @staticmethod
+    def get_session(args):
+        plugin = cli.load_from_argparse_arguments(args)
+        return session.Session(auth=plugin,
+                            user_agent='openstack-seeder',
+                            verify=not args.insecure)
