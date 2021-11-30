@@ -22,12 +22,10 @@ class Trait(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
    
-    def seed(self, spec):
+    def seed(self, traits):
         logging.info('seeding traits')
-        if 'traits' in spec:
-            # seed parent regions
-            for trait in spec['traits']:
-                self._seed_trait(trait)
+        for trait in traits:
+            self._seed_trait(trait)
 
     
     def _seed_trait(self, trait):

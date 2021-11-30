@@ -23,14 +23,13 @@ class Services(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
 
-    def seed(self, spec):
+    def seed(self, services):
         logging.info('seeding services')
-        if 'services' in spec:
-            for service in spec['services']:
-                self.seed_service(service)
+        for service in services:
+            self._seed_service(service)
 
 
-    def seed_service(self, service):
+    def _seed_service(self, service):
         """ seed a keystone service """
         logging.debug("seeding service %s" % service)
         endpoints = None

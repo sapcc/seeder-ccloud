@@ -22,25 +22,24 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
-class Role_Inferences(BaseRegisteredSeedTypeClass):
+class Quota_Class_Sets(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
    
     def seed(self, quota_class_sets):
-        for quota_class_set in quota_class_sets:
-            self._seed_quota_class_sets(quota_class_set)
+        for quota_class, quotas in quota_class_sets.items():
+            self._seed_quota_class_sets(quota_class, quotas)
 
-    def _seed_quota_class_sets(self, quota_class_set):
-            # this have been patched into Nova to create custom quotas (flavor based)
-        for quota_class, quotas in quota_class_set.items():
-            logging.debug("seeding nova quota-class-set %s" % quota_class)
+    def _seed_quota_class_sets(self, quota_class, quotas):
+        # this have been patched into Nova to create custom quotas (flavor based)
+        logging.debug("seeding nova quota-class-set %s" % quota_class)
 
-            try:
-                resp = self.openstack.get_session().post('/os-quota-class-sets/' + quota_class,
-                                endpoint_filter={'service_type': 'compute',
-                                                'interface': 'public'},
-                                json=dict({"quota_class_set": quotas}))
-                logging.debug("Create/Update os-quota-class-set : %s" % resp.text)
-            except Exception as e:
-                logging.error("could not seed quota-class-set %s: %s" % (quota_class, e))
-                raise
+        try:
+            resp = self.openstack.get_session().post('/os-quota-class-sets/' + quota_class,
+                            endpoint_filter={'service_type': 'compute',
+                                            'interface': 'public'},
+                            json=dict({"quota_class_set": quotas}))
+            logging.debug("Create/Update os-quota-class-set : %s" % resp.text)
+        except Exception as e:
+            logging.error("could not seed quota-class-set %s: %s" % (quota_class, e))
+            raise
