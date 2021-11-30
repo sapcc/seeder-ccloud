@@ -19,24 +19,23 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
-class Role(BaseRegisteredSeedTypeClass):
+class Share_Types(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
 
-    def seed(self, spec):
-        logging.info('seeding share_types')
-        if 'share_types' in spec:
-            for share_type in spec['share_types']:
-                self.share_types(share_type)
+    def seed(self, share_types):
+        logging.info('seeding manila share_types')
+        for share_type in share_types:
+            self._seed_share_types(share_type)
 
-    def seed_share_types(self, share_type):
+
+    def _seed_share_types(self, share_type):
         """ seed manila share type """
         logging.debug("seeding Manila share type %s" % share_type)
 
         # intialize manila client
         try:
-            api_version = api_versions.APIVersion("2.40")
-            client = manilaclient.Client(session=sess, api_version=api_version)
+            client = self.opentack.get_manilaclient("2.40")
             manager = client.share_types
         except Exception as e:
             logging.error("Fail to initialize client: %s" % e)
@@ -50,7 +49,7 @@ class Role(BaseRegisteredSeedTypeClass):
             return None
 
         def validate_share_type(sharetype):
-            sharetype = sanitize(sharetype, [
+            sharetype = self.opentack.sanitize(sharetype, [
                 'name', 'description', 'is_public', 'specs', 'extra_specs'])
             specs = sharetype.pop('specs')
             try:
@@ -88,7 +87,7 @@ class Role(BaseRegisteredSeedTypeClass):
 
         # validation sharetype
         share_type = validate_share_type(share_type)
-        logging.debug("Validated Manila share type %s" % sharetype)
+        logging.debug("Validated Manila share type %s" % share_type)
 
         # update share type if exists
         stype = get_type_by_name(share_type['name'])
