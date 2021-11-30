@@ -19,8 +19,8 @@ import argparse
 import sys
 # Here we import the seed_types for the SeedTypeRegistry.
 # The order of importing => order of execution 
-from seeder.openstack.role import Role
-from seeder.openstack.region import Region
+from seeder.seed_types.roles import Roles
+from seeder.seed_types.regions import Regions
 
 from seeder.seed_type_registry import SeedTypeRegistryBase
 from keystoneauth1.loading import cli
@@ -37,12 +37,19 @@ class Seeder:
             seedtype_instance = seedtype_class(self.args)
             self.all_seedtypes[seedtype_name] = seedtype_instance
 
+
     def seed_spec(self, spec):
+        self.spec = spec
         for seedtype_name, seedtype_instance in self.all_seedtypes.items():
             try:
-                seedtype_instance.seed(spec)
+                if seedtype_name in spec:
+                    seedtype_instance.seed(spec[seedtype_name], self)
             except NotImplementedError as e:
-                logging.error('seed_type %s: method seed not implemented' %seedtype_name)
+                logging.error('seed_type %s: method "seed" not implemented' %seedtype_name)
+
+
+    def get_spec(self):
+        return self.spec
 
 
 def setup_logging(args):
@@ -50,6 +57,7 @@ def setup_logging(args):
         format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
         datefmt='%d.%m.%Y %H:%M:%S',
         level=getattr(logging, args.logLevel))
+
 
 def get_args():
     parser = argparse.ArgumentParser()

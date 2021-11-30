@@ -19,22 +19,21 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
-class Role(BaseRegisteredSeedTypeClass):
+class Roles(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
 
-    def seed(self, spec):
+    def seed(self, spec, seeder):
         logging.info('seeding roles')
+        print(seeder.get_spec(), 'lllll')
         if 'roles' in spec:
             for role in spec['roles']:
-                if role:
-                    self.seed_role(role)
+                role = self.openstack.sanitize(role, ('name', 'description', 'domainId'))
+                self.seed_role(role)
 
     def seed_role(self, role):
         """ seed a keystone role """
         logging.info("seeding role %s" % role)
-
-        role = self.openstack.sanitize(role, ('name', 'description', 'domainId'))
 
         # todo: role.domainId ?
         if 'domainId' in role:

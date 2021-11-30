@@ -19,21 +19,20 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder.openstack.openstack_helper import OpenstackHelper
 
 
-class Region(BaseRegisteredSeedTypeClass):
+class Regions(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
    
-    def seed(self, spec):
+    def seed(self, regions):
         logging.info('seeding regions')
-        if 'regions' in spec:
-            # seed parent regions
-            for region in spec['regions']:
-                if 'parent_region' not in region:
-                    self._seed_region(region)
-            # seed child regions
-            for region in spec['regions']:
-                if 'parent_region' in region:
-                    self._seed_region(region)
+        # seed parent regions
+        for region in regions:
+            if 'parent_region' not in region:
+                self._seed_region(region)
+        # seed child regions
+        for region in regions:
+            if 'parent_region' in region:
+                self._seed_region(region)
 
     def _seed_region(self, region):
         """ seed a keystone region """

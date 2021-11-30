@@ -19,7 +19,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder.openstack.openstack_helper import OpenstackHelper
 from urllib.parse import urlparse
 
-class Service(BaseRegisteredSeedTypeClass):
+class Services(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
         self.opentack = OpenstackHelper(args)
 

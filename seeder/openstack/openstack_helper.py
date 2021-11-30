@@ -20,7 +20,6 @@ class OpenstackHelper:
         if not cls._singleton:
             cls._singleton = super(OpenstackHelper, cls).__new__(cls)
             cls.args = args
-            cls.session = cls.get_session()
 
         return cls._singleton
     
@@ -38,17 +37,64 @@ class OpenstackHelper:
         return neutronclient.Client(session=session,
                                     interface=self.args.interface)
 
+
     @cached(cache=TTLCache(maxsize=1, ttl=300))
     def get_novaclient(self):
         session = self.get_session(self.args)
         return novaclient.Client("2.1", session=session,
-                                 endpoint_type=args.interface + 'URL')
+                                 endpoint_type=self.args.interface + 'URL')
 
     
-    def get_placementapi(self):
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def get_cinderclient(self, api_version="3.50"):
+        session = self.get_session(self.args)
+        return cinderclient.Client(session=session, 
+                                   interface=self.args.interface, api_version=api_version)
+
+                            
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def get_manilaclient(self, api_version="2.40"):
+        session = self.get_session(self.args)
+        api_version = api_versions.APIVersion(api_version)
+        return manilaclient.Client(session=session, api_version=api_version)
+
+    
+    def get_placementclient(self, api_version='1.6'):
         session = self.get_session(self.args)
         ks_filter = {'service_type': 'placement', 'interface': self.args.interface}
-        return placementclient(session=session, ks_filter=ks_filter, api_version='1.6')
+        return placementclient(session=session, ks_filter=ks_filter, api_version=api_version)
+
+
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
+    def get_designateclient(self, project_id):
+        # the designate client needs a token scoped to a project.id
+        # due to a crappy bugfix in https://review.openstack.org/#/c/187570/
+        designate_args = copy.copy(self.args)
+        designate_args.os_project_id = project_id
+        designate_args.os_domain_id = None
+        designate_args.os_domain_name = None
+        plugin = cli.load_from_argparse_arguments(designate_args)
+        sess = session.Session(auth=plugin,
+                            user_agent='openstack-seeder',
+                            verify=not self.args.insecure)
+
+        designate = designateclient.Client(session=sess,
+                                        endpoint_type=args.interface + 'URL',
+                                        all_projects=True)
+
+    @cached(cache=TTLCache(maxsize=1, ttl=60))
+    def get_traits(self, only_associated=False):
+        """
+        Return the list of all traits that have been set on at least one resource provider.
+        """
+        try:
+            params = {'associated': 'true'} if only_associated else {}
+            url_params = '&'.join(f'{k}={v}' for k, v in params.items())
+            result = self.get_placementclient().request('GET', f'/traits?{url_params}')
+        except Exception as e:
+            logging.error("Failed checking for trait resource providers: {}".format(e))
+            return []
+        return result.json().get("traits", [])
 
 
     @cached(cache=TTLCache(maxsize=1024, ttl=600))
@@ -178,3 +224,23 @@ class OpenstackHelper:
         return session.Session(auth=plugin,
                             user_agent='openstack-seeder',
                             verify=not args.insecure)
+
+
+    @staticmethod
+    def redact(source,
+           keys=('password', 'secret', 'userPassword', 'cam_password')):
+        def _blankout(data, k):
+            if isinstance(data, list):
+                for item in data:
+                    _blankout(item, k)
+            elif isinstance(data, dict):
+                for attr in keys:
+                    if attr in data:
+                        if isinstance(data[attr], str):
+                            data[attr] = '********'
+                for k, v in data.items():
+                    _blankout(v, keys)
+
+        result = copy.deepcopy(source)
+        _blankout(result, keys)
+        return result
