@@ -15,6 +15,7 @@
 """
 
 import logging
+import re
 
 from seeder.openstack.openstack_helper import OpenstackHelper
 
@@ -489,12 +490,7 @@ class Project_Networks:
         regex = r"^([^@]+)@([^@]+)@([^@]+)$"
 
         logging.debug("seeding routers of project %s" % project.name)
-
-        # grab a neutron client
         neutron = self.openstack.get_neutronclient()
-
-        # grab a keystone client
-        keystone = self.openstack.get_keystoneclient()
 
         for router in routers:
             try:
@@ -622,8 +618,73 @@ class Project_Networks:
                         resource = result['router']
 
                 if interfaces:
-                    seed_router_interfaces(resource, interfaces, args, sess)
+                    self.seed_router_interfaces(resource, interfaces)
             except Exception as e:
                 logging.error("could not seed router %s/%s: %s" % (
                     project.name, router['name'], e))
                 raise
+    
+
+    def seed_router_interfaces(self, router, interfaces):
+        """
+        seed a routers interfaces (routes)
+        :param router:
+        :param interfaces:
+        :param args:
+        :param sess:
+        :return:
+        """
+
+        logging.debug("seeding interfaces of router %s" % router['name'])
+        neutron = self.openstack.get_neutronclient()
+
+        for interface in interfaces:
+            if 'subnet' in interface:
+                subnet_id = None
+                # subnet@project@domain ?
+                if '@' in interface['subnet']:
+                    parts = interface['subnet'].split('@')
+                    if len(parts) > 2:
+                        project_id = self.openstack.get_project_id(parts[2], parts[1])
+                        if project_id:
+                            subnet_id = self.openstack.get_subnet_id(project_id, parts[0])
+                else:
+                    # lookup subnet-id
+                    subnet_id = self.openstack.get_subnet_id(router['tenant_id'],
+                                            interface['subnet'])
+
+                if subnet_id:
+                    interface['subnet_id'] = subnet_id
+
+            interface = self.openstack.sanitize(interface, ('subnet_id', 'port_id'))
+
+            if 'subnet_id' not in interface and 'port_id' not in interface:
+                logging.warn(
+                    "skipping router interface '%s/%s', since it is misconfigured" % (
+                        router['name'], interface))
+                continue
+
+            # check if the interface is already configured for the router
+            query = {'device_id': router['id']}
+            result = neutron.list_ports(retrieve_all=True, **query)
+            found = False
+            for port in result['ports']:
+                if 'port_id' in interface and port['id'] == interface['port_id']:
+                    found = True
+                    break
+                elif 'subnet_id' in interface:
+                    for ip in port['fixed_ips']:
+                        if 'subnet_id' in ip and ip['subnet_id'] == \
+                                interface['subnet_id']:
+                            found = True
+                            break
+                if found:
+                    break
+
+            if found:
+                continue
+
+            # add router interface
+            neutron.add_interface_router(router['id'], interface)
+            logging.info("added interface %s to router'%s'" % (
+                interface, router['name']))

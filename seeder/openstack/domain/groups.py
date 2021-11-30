@@ -18,8 +18,6 @@ import logging
 from keystoneclient import exceptions
 
 from seeder.openstack.openstack_helper import OpenstackHelper
-from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
-from seeder.openstack.domains.role_assignments import Role_Assignments
 
 
 class Groups():

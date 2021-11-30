@@ -25,11 +25,9 @@ class Roles(BaseRegisteredSeedTypeClass):
 
     def seed(self, spec, seeder):
         logging.info('seeding roles')
-        print(seeder.get_spec(), 'lllll')
-        if 'roles' in spec:
-            for role in spec['roles']:
-                role = self.openstack.sanitize(role, ('name', 'description', 'domainId'))
-                self.seed_role(role)
+        for role in spec['roles']:
+            role = self.openstack.sanitize(role, ('name', 'description', 'domainId'))
+            self.seed_role(role)
 
     def seed_role(self, role):
         """ seed a keystone role """

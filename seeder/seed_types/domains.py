@@ -16,10 +16,10 @@
 import logging
 
 from keystoneclient import exceptions
-from seeder.openstack.domains.groups import Groups
-from seeder.openstack.domains.projects.projects import Projects
-from seeder.openstack.domains.role_assignments import Role_Assignments
-from seeder.openstack.domains.users import Users
+from seeder.openstack.domain.groups import Groups
+from seeder.openstack.domain.projects import Projects
+from seeder.openstack.domain.role_assignments import Role_Assignments
+from seeder.openstack.domain.users import Users
 
 from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
@@ -106,7 +106,7 @@ class Domains(BaseRegisteredSeedTypeClass):
         if roles:
             for role in roles:
                 role['domainId'] = resource.id
-                seeder.all_seedtypes['roles'].seed(role)
+                seeder.all_seedtypes['roles'].seed([role])
         if ra:
             for role in ra:
                 assignment = dict()

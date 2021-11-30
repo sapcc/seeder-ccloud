@@ -17,8 +17,10 @@ import logging
 
 from keystoneclient import exceptions
 from keystoneauth1 import exceptions as keystoneauthexceptions
-from seeder.openstack.domains.projects.project_networks import Project_Networks
-from seeder.openstack.domains.swift import Swift
+from designateclient.v2 import client as designateclient
+
+from seeder.openstack.domain.project_networks import Project_Networks
+from seeder.openstack.domain.swift import Swift
 
 
 from seeder.openstack.openstack_helper import OpenstackHelper
