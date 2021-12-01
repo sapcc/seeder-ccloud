@@ -20,7 +20,7 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 
 class Resource_Classes(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
    
     def seed(self, resource_classes):
         logging.info('seeding resource_classes')
@@ -33,6 +33,6 @@ class Resource_Classes(BaseRegisteredSeedTypeClass):
 
         try:
             # api_version=1.7 -> idempotent resource class creation
-            result = self.opentack.get_placementclient(api_version='1.7').request('PUT', PER_CLASS_URL.format(name=resource_class))
+            result = self.openstack.get_placementclient(api_version='1.7').request('PUT', PER_CLASS_URL.format(name=resource_class))
         except Exception as e:
             logging.error("Failed to seed resource-class %s: %s" % (resource_class, e))

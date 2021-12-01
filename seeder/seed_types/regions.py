@@ -21,7 +21,7 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 
 class Regions(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
    
     def seed(self, regions):
         logging.info('seeding regions')
@@ -38,7 +38,7 @@ class Regions(BaseRegisteredSeedTypeClass):
         """ seed a keystone region """
         logging.debug("seeding region %s" % region)
 
-        region = self.opentack.sanitize(region,
+        region = self.openstack.sanitize(region,
                         ('id', 'description', 'parent_region'))
         if 'id' not in region or not region['id']:
             logging.warn(

@@ -21,7 +21,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Share_Types(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
 
     def seed(self, share_types):
         logging.info('seeding manila share_types')
@@ -35,7 +35,7 @@ class Share_Types(BaseRegisteredSeedTypeClass):
 
         # intialize manila client
         try:
-            client = self.opentack.get_manilaclient("2.40")
+            client = self.openstack.get_manilaclient("2.40")
             manager = client.share_types
         except Exception as e:
             logging.error("Fail to initialize client: %s" % e)
@@ -49,7 +49,7 @@ class Share_Types(BaseRegisteredSeedTypeClass):
             return None
 
         def validate_share_type(sharetype):
-            sharetype = self.opentack.sanitize(sharetype, [
+            sharetype = self.openstack.sanitize(sharetype, [
                 'name', 'description', 'is_public', 'specs', 'extra_specs'])
             specs = sharetype.pop('specs')
             try:

@@ -24,7 +24,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Role_Inferences(BaseRegisteredSeedTypeClass):
     def __init__(self, args, spec):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
         self.spec = spec
    
     def seed(self, role_inferences, seeder):
@@ -37,22 +37,22 @@ class Role_Inferences(BaseRegisteredSeedTypeClass):
 
         # todo: role.domainId ? just for global roles?
 
-        role_inference = self.opentack.sanitize(role_inference, ('prior_role', 'implied_role'))
+        role_inference = self.openstack.sanitize(role_inference, ('prior_role', 'implied_role'))
 
         # resolve role-id's
-        prior_role_id = self.opentack.get_role_id(role_inference['prior_role'])
+        prior_role_id = self.openstack.get_role_id(role_inference['prior_role'])
         if not prior_role_id:
             logging.warn(
                 "skipping role-inference '%s', since its prior_role is unknown" % role_inference)
             return
-        implied_role_id = self.opentack.get_role_id(role_inference['implied_role'])
+        implied_role_id = self.openstack.get_role_id(role_inference['implied_role'])
         if not implied_role_id:
             logging.warn(
                 "skipping role-inference '%s', since its implied_role is unknown" % role_inference)
             return
 
         try:
-            self.opentack.get_keystoneclient().inference_rules.get(prior_role_id, implied_role_id)
+            self.openstack.get_keystoneclient().inference_rules.get(prior_role_id, implied_role_id)
         except exceptions.NotFound:
             logging.info("create role-inference '%s'" % role_inference)
-            self.opentack.get_keystoneclient().inference_rules.create(prior_role_id, implied_role_id)
+            self.openstack.get_keystoneclient().inference_rules.create(prior_role_id, implied_role_id)

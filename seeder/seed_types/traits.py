@@ -20,7 +20,7 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 
 class Trait(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
    
     def seed(self, traits):
         logging.info('seeding traits')
@@ -30,6 +30,6 @@ class Trait(BaseRegisteredSeedTypeClass):
     
     def _seed_trait(self, trait):
         try:
-            self.get_placementapi().request('PUT', '/traits/{}'.format(trait))
+            self.openstack.get_placementclient().request('PUT', '/traits/{}'.format(trait))
         except Exception as e:
             logging.error("Failed to seed trait %s: %s" % (trait, e))

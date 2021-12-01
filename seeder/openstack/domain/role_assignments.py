@@ -22,7 +22,7 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 
 class Role_Assignments():
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
    
     def seed(self, role_assignments):
         for role_assignment in role_assignments:

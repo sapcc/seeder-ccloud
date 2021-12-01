@@ -27,7 +27,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Domains(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
         self.assignment = Role_Assignments(args)
         self.args = args
    
@@ -43,7 +43,7 @@ class Domains(BaseRegisteredSeedTypeClass):
         logging.debug("seeding domain %s" % domain)
 
         # grab a keystone client
-        keystone = self.opentack.get_keystoneclient()
+        keystone = self.openstack.get_keystoneclient()
 
         users = None
         if 'users' in domain:
@@ -64,7 +64,7 @@ class Domains(BaseRegisteredSeedTypeClass):
         if 'role_assignments' in domain:
             ra = domain.pop('role_assignments', None)
 
-        domain = self.opentack.sanitize(domain, ('name', 'description', 'enabled'))
+        domain = self.openstack.sanitize(domain, ('name', 'description', 'enabled'))
 
         if 'name' not in domain or not domain['name']:
             logging.warn(

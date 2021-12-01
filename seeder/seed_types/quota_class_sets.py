@@ -24,7 +24,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Quota_Class_Sets(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
    
     def seed(self, quota_class_sets):
         for quota_class, quotas in quota_class_sets.items():

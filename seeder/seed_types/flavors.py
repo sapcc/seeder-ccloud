@@ -23,7 +23,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Flavors(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
    
     def seed(self, flavors, seeder):
         resource_classes: set[str] = set()

@@ -21,11 +21,11 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Roles(BaseRegisteredSeedTypeClass):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
 
-    def seed(self, spec, seeder):
+    def seed(self, roles):
         logging.info('seeding roles')
-        for role in spec['roles']:
+        for role in roles:
             role = self.openstack.sanitize(role, ('name', 'description', 'domainId'))
             self.seed_role(role)
 

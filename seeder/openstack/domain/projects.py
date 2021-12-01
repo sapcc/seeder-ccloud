@@ -29,7 +29,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 class Projects():
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
         self.networks = Project_Networks(args)
    
     def seed(self, projects, domain):
@@ -282,7 +282,7 @@ class Projects():
         logging.debug("seeding flavors of project %s" % project.name)
 
         # grab a nova client
-        nova = self.opentack.get_novaclient()
+        nova = self.openstack.get_novaclient()
         for flavorid in flavors:
             try:
                 # validate flavor-id

@@ -24,7 +24,7 @@ from keystoneclient import exceptions
 
 class Rbac_Policies(BaseRegisteredSeedTypeClass):
     def __init__(self, args, spec):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
         self.spec = spec
    
     def seed(self, rbac_policies, seeder):

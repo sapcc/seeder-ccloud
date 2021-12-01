@@ -23,7 +23,7 @@ from keystoneclient import exceptions
 
 class Swift():
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
 
 
     def seed(self, project, swift):

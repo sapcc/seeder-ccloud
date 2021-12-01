@@ -19,7 +19,7 @@ from seeder.openstack.openstack_helper import OpenstackHelper
 
 class Users(args):
     def __init__(self, args):
-        self.opentack = OpenstackHelper(args)
+        self.openstack = OpenstackHelper(args)
 
     def seed(self, domain, users):
         self.role_assignments = []
@@ -32,14 +32,14 @@ class Users(args):
         """ seed keystone users and their role-assignments """
         logging.debug("seeding users %s %s" % (domain.name, user))
 
-        keystone = self.opentack.get_keystoneclient()
+        keystone = self.openstack.get_keystoneclient()
 
         ra = None
         if 'role_assignments' in user:
             ra = user.pop('role_assignments')
 
         if '@' not in user['name']:
-            user = self.opentack.sanitize(user, (
+            user = self.openstack.sanitize(user, (
                 'name', 'email', 'description', 'password', 'enabled',
                 'default_project'))
 
