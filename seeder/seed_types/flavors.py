@@ -14,16 +14,17 @@
  limitations under the License.
 """
 import logging
-from typing import DefaultDict
-from seeder.openstack.openstack_helper import OpenstackHelper
 
-from novaclient import exceptions as novaexceptions
+from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
+from deepdiff import DeepDiff
+from novaclient import exceptions as novaexceptions
 
 class Flavors(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
-        self.openstack = OpenstackHelper(args)
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
    
     def seed(self, flavors, seeder):
         resource_classes: set[str] = set()
@@ -93,22 +94,24 @@ class Flavors(BaseRegisteredSeedTypeClass):
                     flavor_cmp['OS-FLV-EXT-DATA:ephemeral'] = flavor_cmp.pop('ephemeral')
 
                 # check for delta
-                for attr in list(flavor_cmp.keys()):
-                    if flavor_cmp[attr] != getattr(resource, attr):
-                        logging.info(
-                            "deleting flavor '%s' to re-create, since '%s' differs" %
-                            (flavor['name'], attr))
+                diff = DeepDiff(resource, flavor_cmp)
+                if len(diff.keys()) > 0:
+                    logging.info(
+                        "deleting flavor '%s' to re-create, since it differs '%s'" %
+                        (flavor['name'], diff))
+                    if not self.dry_run:
                         resource.delete()
                         create = True
-                        break
+
             except novaexceptions.NotFound:
                 create = True
 
             # (re-) create the flavor
             if create:
                 logging.info("creating flavor '%s'" % flavor['name'])
-                flavor['flavorid'] = flavor.pop('id')
-                resource = nova.flavors.create(**flavor)
+                if not self.dry_run:
+                    flavor['flavorid'] = flavor.pop('id')
+                    resource = nova.flavors.create(**flavor)
 
             # take care of the flavors extra specs
             if extra_specs and resource:
@@ -123,7 +126,7 @@ class Flavors(BaseRegisteredSeedTypeClass):
                     set_extra_specs = True
                     keys = extra_specs
 
-                if set_extra_specs:
+                if set_extra_specs and not self.dry_run:
                     logging.info(
                         "updating extra-specs '%s' of flavor '%s'" % (
                             keys, flavor['name']))

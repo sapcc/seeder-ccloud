@@ -23,13 +23,15 @@ from keystoneclient import exceptions
 
 
 class Rbac_Policies(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, spec):
-        self.openstack = OpenstackHelper(args)
-        self.spec = spec
-   
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
+
+
     def seed(self, rbac_policies, seeder):
         for rbac_policy in rbac_policies:
             self._seed_rbac_policy(rbac_policy)
+
 
     def _seed_rbac_policy(self, rbac):
         """ seed a neutron rbac-policy """
@@ -89,7 +91,8 @@ class Rbac_Policies(BaseRegisteredSeedTypeClass):
                 body = {'rbac_policy': rbac.copy()}
 
                 logging.info("create rbac-policy '%s'" % rbac)
-                neutron.create_rbac_policy(body=body)
+                if not self.dry_run:
+                    neutron.create_rbac_policy(body=body)
 
         except Exception as e:
             logging.error("could not seed rbac-policy %s: %s" % (rbac, e))

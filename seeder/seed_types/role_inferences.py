@@ -23,9 +23,9 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 class Role_Inferences(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, spec):
-        self.openstack = OpenstackHelper(args)
-        self.spec = spec
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
    
     def seed(self, role_inferences, seeder):
         for role_inference in role_inferences:
@@ -55,4 +55,5 @@ class Role_Inferences(BaseRegisteredSeedTypeClass):
             self.openstack.get_keystoneclient().inference_rules.get(prior_role_id, implied_role_id)
         except exceptions.NotFound:
             logging.info("create role-inference '%s'" % role_inference)
-            self.openstack.get_keystoneclient().inference_rules.create(prior_role_id, implied_role_id)
+            if not self.dry_run:
+                self.openstack.get_keystoneclient().inference_rules.create(prior_role_id, implied_role_id)

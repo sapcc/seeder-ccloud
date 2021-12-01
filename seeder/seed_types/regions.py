@@ -18,10 +18,13 @@ import logging
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder.openstack.openstack_helper import OpenstackHelper
 
+from deepdiff import DeepDiff
+
 
 class Regions(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
-        self.openstack = OpenstackHelper(args)
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
    
     def seed(self, regions):
         logging.info('seeding regions')
@@ -52,14 +55,15 @@ class Regions(BaseRegisteredSeedTypeClass):
 
         if not result:
             logging.info("create region '%s'" % region['id'])
-            self.openstack.get_keystoneclient().regions.create(**region)
+            if not self.dry_run:
+                self.openstack.get_keystoneclient().regions.create(**region)
         else:  # wtf: why can't they deal with parent_region(_id) consistently
             wtf = region.copy()
             if 'parent_region' in wtf:
                 wtf['parent_region_id'] = wtf.pop('parent_region')
-            for attr in list(wtf.keys()):
-                if wtf[attr] != result._info.get(attr, ''):
-                    logging.info(
-                        "%s differs. update region '%s'" % (attr, region))
+
+            diff = DeepDiff(result, wtf)
+            if len(diff.keys()) > 0:
+                logging.debug("region %s differs: '%s'" % (region['name'], diff))
+                if not self.dry_run:
                     self.openstack.get_keystoneclient().regions.update(result.id, **region)
-                    break

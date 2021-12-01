@@ -20,8 +20,9 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 class Share_Types(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
-        self.openstack = OpenstackHelper(args)
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
 
     def seed(self, share_types):
         logging.info('seeding manila share_types')
@@ -93,13 +94,15 @@ class Share_Types(BaseRegisteredSeedTypeClass):
         stype = get_type_by_name(share_type['name'])
         if stype:
             try:
-                update_type(stype, share_type['extra_specs'])
+                if not self.dry_run:
+                    update_type(stype, share_type['extra_specs'])
             except Exception as e:
                 logging.error("Failed to update share type %s: %s" % (share_type, e))
                 raise
         else:
             try:
-                create_type(share_type)
+                if not self.dry_run:
+                    create_type(share_type)
             except Exception as e:
                 logging.error("Failed to create share type %s: %s" % (share_type, e))
                 raise

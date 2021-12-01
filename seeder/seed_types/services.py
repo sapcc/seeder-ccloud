@@ -17,11 +17,14 @@
 import logging
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder.openstack.openstack_helper import OpenstackHelper
+
 from urllib.parse import urlparse
+from deepdiff import DeepDiff
 
 class Services(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
-        self.openstack = OpenstackHelper(args)
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
 
     def seed(self, services):
         logging.info('seeding services')
@@ -50,15 +53,15 @@ class Services(BaseRegisteredSeedTypeClass):
             logging.info(
                 "create service '%s/%s'" % (
                     service['name'], service['type']))
-            resource = self.openstack.get_keystoneclient().services.create(**service)
+            if not self.dry_run:
+                resource = self.openstack.get_keystoneclient().services.create(**service)
         else:
             resource = result[0]
-            for attr in list(service.keys()):
-                if service[attr] != resource._info.get(attr, ''):
-                    logging.info("%s differs. update service '%s/%s'" % (
-                        attr, service['name'], service['type']))
+            diff = DeepDiff(resource, service)
+            if len(diff.keys()) > 0:
+                logging.debug("endpoint %s differs: '%s'" % (service['name'], diff))
+                if not self.dry_run:
                     self.openstack.get_keystoneclient().services.update(resource.id, **service)
-                    break
 
         if endpoints:
             self.seed_endpoints(resource, endpoints)
@@ -114,10 +117,8 @@ class Services(BaseRegisteredSeedTypeClass):
                 self.openstack.get_keystoneclient().endpoints.create(service.id, **endpoint)
             else:
                 resource = result[0]
-                for attr in list(endpoint.keys()):
-                    if endpoint[attr] != resource._info.get(attr, ''):
-                        logging.info("%s differs. update endpoint '%s/%s'" %
-                                    (attr, service.name,
-                                    endpoint['interface']))
+                diff = DeepDiff(resource, endpoint)
+                if len(diff.keys()) > 0:
+                    logging.debug("endpoint %s differs: '%s'" % (endpoint['interface'], diff))
+                    if not self.dry_run:
                         self.openstack.get_keystoneclient().endpoints.update(resource.id, **endpoint)
-                        break

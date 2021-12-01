@@ -18,10 +18,13 @@ import logging
 from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
+from deepdiff import DeepDiff
+
 
 class Roles(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
-        self.openstack = OpenstackHelper(args)
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
 
     def seed(self, roles):
         logging.info('seeding roles')
@@ -40,12 +43,12 @@ class Roles(BaseRegisteredSeedTypeClass):
             result = self.openstack.get_keystoneclient().roles.list(name=role['name'])
         if not result:
             logging.info("create role '%s'" % role)
-            resource = self.openstack.get_keystoneclient().roles.create(**role)
+            if not self.dry_run:
+                resource = self.openstack.get_keystoneclient().roles.create(**role)
         else:
             resource = result[0]
-            for attr in list(role.keys()):
-                if role[attr] != resource._info.get(attr, ''):
-                    logging.info(
-                        "%s differs. update role '%s'" % (attr, role))
+            diff = DeepDiff(resource, role)
+            if len(diff.keys()) > 0:
+                logging.debug("role %s differs: '%s'" % (role['name'], diff))
+                if not self.dry_run:
                     self.openstack.get_keystoneclient().roles.update(resource.id, **role)
-                    break

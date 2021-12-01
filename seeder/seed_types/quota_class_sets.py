@@ -23,8 +23,9 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 class Quota_Class_Sets(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
-        self.openstack = OpenstackHelper(args)
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
    
     def seed(self, quota_class_sets):
         for quota_class, quotas in quota_class_sets.items():
@@ -35,11 +36,12 @@ class Quota_Class_Sets(BaseRegisteredSeedTypeClass):
         logging.debug("seeding nova quota-class-set %s" % quota_class)
 
         try:
-            resp = self.openstack.get_session().post('/os-quota-class-sets/' + quota_class,
-                            endpoint_filter={'service_type': 'compute',
-                                            'interface': 'public'},
-                            json=dict({"quota_class_set": quotas}))
-            logging.debug("Create/Update os-quota-class-set : %s" % resp.text)
+            if not self.dry_run:
+                resp = self.openstack.get_session().post('/os-quota-class-sets/' + quota_class,
+                                endpoint_filter={'service_type': 'compute',
+                                                'interface': 'public'},
+                                json=dict({"quota_class_set": quotas}))
+                logging.debug("Create/Update os-quota-class-set : %s" % resp.text)
         except Exception as e:
             logging.error("could not seed quota-class-set %s: %s" % (quota_class, e))
             raise

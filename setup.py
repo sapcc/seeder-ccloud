@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(
-    name='openstack_seeder',
-    version='2.0.1',
+    name='seeder_ccloud',
+    version='1.0.0',
     packages='.',
     install_requires=[
         'python-keystoneclient>=3.20.0',
@@ -26,10 +26,10 @@ setup(
     license='',
     author='Rudolf Vriend',
     author_email='rudolf.vriend@sap.com',
-    description='Openstack Seeder',
+    description='Seeder CCloud',
     entry_points = {
         "console_scripts": [
-            'openstack-seed-loader = openstack_seeder:main',
+            'ccloud-seeder-operator = seeder_ccloud:main',
         ]
         },
 )

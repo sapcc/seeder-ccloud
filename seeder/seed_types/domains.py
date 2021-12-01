@@ -14,8 +14,8 @@
  limitations under the License.
 """
 import logging
+from seeder import utils
 
-from keystoneclient import exceptions
 from seeder.openstack.domain.groups import Groups
 from seeder.openstack.domain.projects import Projects
 from seeder.openstack.domain.role_assignments import Role_Assignments
@@ -24,19 +24,23 @@ from seeder.openstack.domain.users import Users
 from seeder.openstack.openstack_helper import OpenstackHelper
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
+from deepdiff import DeepDiff
+from keystoneclient import exceptions
+
 
 class Domains(BaseRegisteredSeedTypeClass):
-    def __init__(self, args):
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(args)
-        self.assignment = Role_Assignments(args)
-        self.args = args
+
    
     def seed(self, domains, seeder):
+        assignment = Role_Assignments(self.args)
         self.role_assignments = []
         for domain in domains:
             self._seed_domain(domain, seeder)
 
-        self.assignment.seed(self.role_assignments)
+        assignment.seed(self.role_assignments)
 
 
     def _seed_domain(self, domain, seeder):
@@ -73,17 +77,17 @@ class Domains(BaseRegisteredSeedTypeClass):
 
         result = keystone.domains.list(name=domain['name'])
         if not result:
-            logging.info("create domain '%s'" % domain['name'])
-            resource = keystone.domains.create(**domain)
+            if not self.dry_run:
+                logging.debug("create domain '%s'" % domain['name'])
+                resource = keystone.domains.create(**domain)
         else:
             resource = result[0]
-            for attr in list(domain.keys()):
-                if domain[attr] != resource._info.get(attr, ''):
-                    logging.info(
-                        "%s differs. update domain '%s'" % (
-                            attr, domain['name']))
+            diff = DeepDiff(resource, domain)
+            if len(diff.keys()) > 0:
+                if not self.dry_run:
+                #if not self._domain_config_equal(driver, result.to_dict()):
+                    logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
                     keystone.domains.update(resource.id, **domain)
-                    break
 
         # cache the domain id
         #if resource.name not in domain_cache:
@@ -137,32 +141,16 @@ class Domains(BaseRegisteredSeedTypeClass):
         # get the current domain configuration
         try:
             result = keystone.domain_configs.get(domain)
-            if not self._domain_config_equal(driver, result.to_dict()):
-                logging.info('updating domain config %s' % domain.name)
-                keystone.domain_configs.update(domain, driver)
+            diff = DeepDiff(result, driver, exclude_obj_callback=utils.diff_exclude_password_callback)
+            if len(diff.keys()) > 0:
+                if not self.dry_run:
+                #if not self._domain_config_equal(driver, result.to_dict()):
+                    logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
+                    keystone.domain_configs.update(domain, driver)
         except exceptions.NotFound:
-            logging.info('creating domain config %s' % domain.name)
-            keystone.domain_configs.create(domain, driver)
+             if not self.dry_run:
+                logging.debug('creating domain config %s' % domain.name)
+                keystone.domain_configs.create(domain, driver)
         except Exception as e:
             logging.error(
                 'could not configure domain %s: %s' % (domain.name, e))
-
-    def _domain_config_equal(self, new, current):
-        """
-        compares domain configurations (and ignores passwords in the comparison)
-        :param new:
-        :param current:
-        :return:
-        """
-        for key, value in list(new.items()):
-            if key in current:
-                if isinstance(value, dict):
-                    if not self._domain_config_equal(value, current[key]):
-                        return False
-                elif new[key] != current[key]:
-                    return False
-            elif 'password' in key:
-                continue  # ignore, since it is supressed during config get
-            else:
-                return False
-        return True

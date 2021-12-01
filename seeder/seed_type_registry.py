@@ -14,8 +14,6 @@
  limitations under the License.
 """
 
-from inspect import ArgSpec
-
 
 class SeedTypeRegistryBase(type):
 
@@ -32,8 +30,10 @@ class SeedTypeRegistryBase(type):
 
 
 class BaseRegisteredSeedTypeClass(metaclass=SeedTypeRegistryBase):
-    def __init__(self, args):
+    def __init__(self, args, seeder, dry_run=False):
         self.args = args
+        self.seeder = seeder
+        self.dry_run = dry_run
 
     def seed(self, *args, **kwargs):
         """

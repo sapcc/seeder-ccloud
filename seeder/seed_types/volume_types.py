@@ -20,12 +20,15 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 class Volume_Types(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, spec):
-        self.openstack = OpenstackHelper(args)
-   
+    def __init__(self, args, seeder, dry_run=False):
+        super().__init__(args, seeder, dry_run)
+        self.openstack = OpenstackHelper(self.args)
+
+
     def seed(self, volume_types, seeder):
         for volume_type in volume_types:
             self._seed_volume_type(volume_type)
+
 
     def _seed_volume_type(self, volume_type):
         """seed a cinder volume type"""
@@ -60,13 +63,15 @@ class Volume_Types(BaseRegisteredSeedTypeClass):
         vtype = get_type_by_name(volume_type['name'])
         if vtype:
             try:
-                update_type(vtype, volume_type)
+                if not self.dry_run:
+                    update_type(vtype, volume_type)
             except Exception as e:
                 logging.error("Failed to update volume type %s: %s" % (volume_type, e))
                 raise
         else:
             try:
-                create_type(volume_type)
+                if not self.dry_run:
+                    create_type(volume_type)
             except Exception as e:
                 logging.error("Failed to create volume type %s: %s" % (volume_type, e))
                 raise

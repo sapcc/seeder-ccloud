@@ -34,7 +34,7 @@ class Seeder:
         self.all_seedtypes = dict()
         for seedtype_name in SeedTypeRegistryBase.SEED_TYPE_REGISTRY:
             seedtype_class = SeedTypeRegistryBase.SEED_TYPE_REGISTRY[seedtype_name]
-            seedtype_instance = seedtype_class(self.args)
+            seedtype_instance = seedtype_class(self.args, self, self.args.dry_run)
             self.all_seedtypes[seedtype_name] = seedtype_instance
 
 
@@ -43,7 +43,7 @@ class Seeder:
         for seedtype_name, seedtype_instance in self.all_seedtypes.items():
             try:
                 if seedtype_name in spec:
-                    seedtype_instance.seed(spec[seedtype_name], self)
+                    seedtype_instance.seed(spec[seedtype_name])
             except NotImplementedError as e:
                 logging.error('seed_type %s: method "seed" not implemented' %seedtype_name)
 
