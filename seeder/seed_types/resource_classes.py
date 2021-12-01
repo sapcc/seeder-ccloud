@@ -17,6 +17,8 @@ import logging
 from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder.openstack.openstack_helper import OpenstackHelper
 
+from osc_placement.resources.resource_class import PER_CLASS_URL
+
 
 class Resource_Classes(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
