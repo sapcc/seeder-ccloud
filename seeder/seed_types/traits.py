@@ -18,7 +18,7 @@ from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder.openstack.openstack_helper import OpenstackHelper
 
 
-class Trait(BaseRegisteredSeedTypeClass):
+class Traits(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)

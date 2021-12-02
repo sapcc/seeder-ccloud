@@ -17,7 +17,7 @@ import logging
 
 from seeder.openstack.openstack_helper import OpenstackHelper
 
-class Users(args):
+class Users():
     def __init__(self, args):
         self.openstack = OpenstackHelper(args)
 
