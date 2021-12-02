@@ -15,7 +15,7 @@
 """
 import logging
 
-from seeder.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 class Users():
     def __init__(self, args):

@@ -14,8 +14,8 @@
  limitations under the License.
 """
 import logging
-from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
-from seeder.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
+from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 from osc_placement.resources.resource_class import PER_CLASS_URL
 

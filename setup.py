@@ -29,7 +29,7 @@ setup(
     description='Seeder CCloud',
     entry_points = {
         "console_scripts": [
-            'ccloud-seeder-operator = seeder_ccloud:main',
+            'seeder-ccloud-operator = seeder_ccloud:main',
         ]
         },
 )

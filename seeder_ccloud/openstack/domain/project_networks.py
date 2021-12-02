@@ -17,7 +17,7 @@
 import logging
 import re
 
-from seeder.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 class Project_Networks:
     def __init__(self, args):

@@ -17,7 +17,7 @@ import logging
 
 from keystoneclient import exceptions
 
-from seeder.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 
 class Role_Assignments():

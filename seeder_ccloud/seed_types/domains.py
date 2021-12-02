@@ -14,15 +14,15 @@
  limitations under the License.
 """
 import logging
-from seeder import utils
+from seeder_ccloud import utils
 
-from seeder.openstack.domain.groups import Groups
-from seeder.openstack.domain.projects import Projects
-from seeder.openstack.domain.role_assignments import Role_Assignments
-from seeder.openstack.domain.users import Users
+from seeder_ccloud.openstack.domain.groups import Groups
+from seeder_ccloud.openstack.domain.projects import Projects
+from seeder_ccloud.openstack.domain.role_assignments import Role_Assignments
+from seeder_ccloud.openstack.domain.users import Users
 
-from seeder.openstack.openstack_helper import OpenstackHelper
-from seeder.seed_type_registry import BaseRegisteredSeedTypeClass
+from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
 from deepdiff import DeepDiff
 from keystoneclient import exceptions
