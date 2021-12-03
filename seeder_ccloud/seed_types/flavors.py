@@ -65,8 +65,8 @@ class Flavors(BaseRegisteredSeedTypeClass):
                     "and then wait for the seeder to run again.")
 
         # seed the missing traits and resource_classes
-        self.seeder.all_seedtypes['resource_classes'].seed(set(seeder.get_spec()['resource_classes']) - resource_classes)
-        self.seeder.all_seedtypes['traits'].seed(set(seeder.get_spec()['traits']) - traits)
+        self.seeder.all_seedtypes['resource_classes'].seed(set(self.seeder.get_spec()['resource_classes']) - resource_classes)
+        self.seeder.all_seedtypes['traits'].seed(set(self.seeder.get_spec()['traits']) - traits)
 
     def _seed_flavor(self, flavor):
         logging.debug("seeding flavor %s" % flavor)
