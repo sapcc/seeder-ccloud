@@ -28,7 +28,7 @@ from seeder_ccloud.seeder import Seeder
 
 @kopf.on.startup()
 async def startup(settings: kopf.OperatorSettings, **kwargs):
-    global seeder
+    args = get_args()
     # Load kubernetes_asyncio config as kopf does not do that automatically for us.
     try:
         # Try incluster config first.
@@ -36,7 +36,7 @@ async def startup(settings: kopf.OperatorSettings, **kwargs):
     except kubernetes_asyncio.config.ConfigException:
         # Fall back to regular config.
         await kubernetes_asyncio.config.load_kube_config()
-    settings.execution.max_workers = 100
+    settings.execution.max_workers = args.max_workers
     settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix='openstackseeds.sap.com')
 
 
@@ -111,6 +111,8 @@ def get_args():
                         default='INFO')
     parser.add_argument('--dry-run', default=False, action='store_true',
                         help='Only parse the seed, do no actual seeding.')
+    parser.add_argument('--max-workers', default=1, action='store_true',
+                        help='Max workers for the kopf operator.')
     cli.register_argparse_arguments(parser, sys.argv[1:])
     return parser.parse_args()
 
@@ -118,7 +120,8 @@ def get_args():
 def main():
     args = get_args()
     setup_logging(args)
-    kopf.configure(verbose=True, log_prefix=True)  # purely for logging
+    verbose = True if args.logLevel == 'DEBUG' else False 
+    kopf.configure(verbose=verbose, log_prefix=True)  # purely for logging
 
     # either threading.Event(), or asyncio.Event(), or asyncio/concurrent Future().
     memo = kopf.Memo(my_stop_flag=threading.Event())
