@@ -22,6 +22,7 @@ import sys
 import logging
 import argparse
 import kubernetes_asyncio
+from kubernetes.client.rest import ApiException
 from keystoneauth1.loading import cli
 from seeder_ccloud.seeder import Seeder
 
@@ -42,28 +43,29 @@ async def startup(settings: kopf.OperatorSettings, **kwargs):
 
 #why we dont use async handlers: https://kopf.readthedocs.io/en/stable/async/
 #@kopf.on.create('openstackseeds.openstack.stable.sap.cc')
-@kopf.on.create('kopfexamples')
-@kopf.on.update('kopfexamples')
-def seed_create_update(patch, memo: kopf.Memo, spec, name, namespace, status, retry, **kwargs):
+@kopf.on.create('kopfexamples', annotations={'operator_version': '2'})
+@kopf.on.update('kopfexamples', annotations={'operator_version': '2'})
+def seed_create_update(patch, memo: kopf.Memo, spec, name, namespace, status, diff, retry, **kwargs):
+    # TODO: just seed the diff?!
     logging.debug("retried {0} to seed {1}".format(retry, name))
     requires = spec.get('requires', None)
-    if requires == None:
-        return
     try:
         resolveRequires(requires)
+    except kopf.TemporaryError as error:
+        raise kopf.TemporaryError('{}'.format(error), delay=30)
     except Exception as error:
-        logging.error(error)
         #patch.status['seeder_error'] = error
-        raise kopf.TemporaryError('requires not yet seeded', delay=30)
+        raise kopf.PermanentError('error getting required seeds: {}'.format(error))
 
     try:
         memo['seeder'].seed_spec(spec)
     except Exception as error:
-        logging.error("could not seed %s. error: %s" % name, error)
-        raise kopf.TemporaryError('expected error', delay=300)
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=300)
 
 
 def resolveRequires(requires):
+    if requires == None:
+        return
     api = kubernetes.client.CustomObjectsApi()
     for re in requires:
         # namespace/seed_name
@@ -75,14 +77,41 @@ def resolveRequires(requires):
             namespace=name[0],
             name=name[1],
         )
+        if res is None:
+            raise kopf.TemporaryError('cannot find dependency {}'.format(re))
         # check if the operator has added the annotation yet
         if res['metadata']['annotations']['kopf.zalando.org/last-handled-configuration'] == None:
-            raise Exception('dependency not reconsiled yet')
+            raise kopf.TemporaryError('dependency not reconsiled yet')
 
         # compare the last handled state with the actual crd state. We only care about spec changes
         lastHandled = json.loads(res['metadata']['annotations']['kopf.zalando.org/last-handled-configuration'])
         if lastHandled['spec'] != res['spec']:
-            raise Exception('dependency not reconsiled yet')
+            raise kopf.TemporaryError('dependency not reconsiled yet')
+
+
+def has_dependency_cycle(seed_name, namespace, requires):
+    api = kubernetes.client.CustomObjectsApi()
+    if requires == None:
+        return False
+    for re in requires:
+        # namespace/seed_name
+        name = re.split("/")
+        try:
+            res = api.get_namespaced_custom_object_status(
+                group='kopf.dev', 
+                version='v1',
+                plural='kopfexamples',
+                namespace=name[0],
+                name=name[1],
+            )
+            requires = res.spec.get('requires', None)
+            if namespace + seed_name in requires:
+                return True
+            if requires is not None:
+                has_dependency_cycle(requires)
+        except ApiException as e:
+            logging.error('error checking for dependency cycle: {}'.format(e))
+    return False
 
 
 def setup_logging(args):
