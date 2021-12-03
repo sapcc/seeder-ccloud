@@ -34,16 +34,16 @@ class Domains(BaseRegisteredSeedTypeClass):
         self.openstack = OpenstackHelper(args)
 
    
-    def seed(self, domains, seeder):
+    def seed(self, domains):
         assignment = Role_Assignments(self.args)
         self.role_assignments = []
         for domain in domains:
-            self._seed_domain(domain, seeder)
+            self._seed_domain(domain)
 
         assignment.seed(self.role_assignments)
 
 
-    def _seed_domain(self, domain, seeder):
+    def _seed_domain(self, domain):
         logging.debug("seeding domain %s" % domain)
 
         # grab a keystone client
@@ -110,7 +110,7 @@ class Domains(BaseRegisteredSeedTypeClass):
         if roles:
             for role in roles:
                 role['domainId'] = resource.id
-                seeder.all_seedtypes['roles'].seed([role])
+                self.seeder.all_seedtypes['roles'].seed([role])
         if ra:
             for role in ra:
                 assignment = dict()

@@ -25,7 +25,7 @@ class Volume_Types(BaseRegisteredSeedTypeClass):
         self.openstack = OpenstackHelper(self.args)
 
 
-    def seed(self, volume_types, seeder):
+    def seed(self, volume_types):
         for volume_type in volume_types:
             self._seed_volume_type(volume_type)
 

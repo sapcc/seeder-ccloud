@@ -27,7 +27,7 @@ class Role_Inferences(BaseRegisteredSeedTypeClass):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
    
-    def seed(self, role_inferences, seeder):
+    def seed(self, role_inferences):
         for role_inference in role_inferences:
             self._seed_role_inference(role_inference)
 

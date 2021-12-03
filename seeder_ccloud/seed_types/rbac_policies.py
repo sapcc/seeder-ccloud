@@ -28,7 +28,7 @@ class Rbac_Policies(BaseRegisteredSeedTypeClass):
         self.openstack = OpenstackHelper(self.args)
 
 
-    def seed(self, rbac_policies, seeder):
+    def seed(self, rbac_policies):
         for rbac_policy in rbac_policies:
             self._seed_rbac_policy(rbac_policy)
 
