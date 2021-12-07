@@ -93,7 +93,7 @@ def has_dependency_cycle(seed_name, namespace, requires):
             if namespace + seed_name in requires:
                 return True
             if requires is not None:
-                has_dependency_cycle(requires)
+                has_dependency_cycle(seed_name, namespace, requires)
         except ApiException as e:
             logging.error('error checking for dependency cycle: {}'.format(e))
     return False
