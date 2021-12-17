@@ -13,11 +13,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
+import logging, kopf
 
 from novaclient import exceptions as novaexceptions
 from keystoneclient import exceptions
-
+from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
@@ -26,10 +26,26 @@ class Role_Inferences(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
-   
+
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.role_inferences')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.role_inferences')
+    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} role_inferences'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+        try:
+            memo['seeder'].all_seedtypes['role_inferences'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+
+
     def seed(self, role_inferences):
         for role_inference in role_inferences:
             self._seed_role_inference(role_inference)
+
 
     def _seed_role_inference(self, role_inference):
         """ seed a keystone role inference """

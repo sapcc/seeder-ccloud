@@ -16,15 +16,14 @@
 import asyncio
 import threading
 import kopf
-import kubernetes
 import json
 import sys
 import logging
 import argparse
 import kubernetes_asyncio
+from kubernetes.client import api_client
 from kubernetes.client.rest import ApiException
 from keystoneauth1.loading import cli
-from seeder_ccloud.seeder import Seeder
 
 
 @kopf.on.startup()
@@ -37,72 +36,68 @@ async def startup(settings: kopf.OperatorSettings, **kwargs):
     except kubernetes_asyncio.config.ConfigException:
         # Fall back to regular config.
         await kubernetes_asyncio.config.load_kube_config()
+
     settings.execution.max_workers = args.max_workers
-    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix='openstackseeds.sap.com')
+    settings.persistence.diffbase_storage = kopf.AnnotationsDiffBaseStorage(
+        prefix='seeder.ccloud.sap.com',
+        key='last-handled-configuration',
+    )
+    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix='seeder.ccloud.sap.com')
 
 
-#why we dont use async handlers: https://kopf.readthedocs.io/en/stable/async/
-#@kopf.on.create('openstackseeds.openstack.stable.sap.cc')
-@kopf.on.create('kopfexamples', annotations={'operator_version': '2'})
-def seed_create(patch, memo: kopf.Memo, spec, name, namespace, status, retry):
-    logging.debug("retried {0}x to seed {1}".format(retry, name))
+@kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'})
+@kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.requires', value=kopf.PRESENT)
+def check_dependencies(spec, new, name, namespace, **kwargs):
     requires = spec.get('requires', None)
-    if has_dependency_cycle(name, namespace, requires):
-        #patch.annotations['seeder_error'] = 'dependency cyle detected'
+    if not requires:
+        return
+    if has_dependency_cycle(api_client, name, namespace, requires):
         raise kopf.TemporaryError('dependency cycle', delay=300)
     try:
-        resolveRequires(requires)
+        resolve_requires(api_client, requires)
     except kopf.TemporaryError as error:
         raise kopf.TemporaryError('{}'.format(error), delay=30)
-        #patch.annotations['seeder_error'] = 'required seeds not seeded'
     except Exception as error:
-        #patch.annotations['seeder_error'] = 'cannot check for requires'
-        raise kopf.PermanentError('error getting required seeds: {}'.format(error))
-
-    try:
-        memo['seeder'].seed_spec(spec)
-    except Exception as error:
-        #patch.annotations['seeder_error'] = 'error exec seed'
-        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=300)
+        raise kopf.TemporaryError('{}'.format(error), delay=30)
 
 
-@kopf.on.update('kopfexamples', annotations={'operator_version': '2'})
-def seed_update(patch, memo: kopf.Memo, spec, name, namespace, status, diff, retry):
-    # TODO: just seed the diff?!
-    # check for has_dependency_cycle only when the requires field changed!!
-    print(diff)
-    pass
-
-
-def has_dependency_cycle(seed_name, namespace, requires):
-    api = kubernetes.client.CustomObjectsApi()
-    if requires == None:
+def has_dependency_cycle(client, seed_name, namespace, requires):
+    if requires is None:
         return False
-    for re in requires:
-        # namespace/seed_name
-        name = re.split("/")
-        try:
-            res = api.get_namespaced_custom_object_status(
-                group='kopf.dev', 
-                version='v1',
-                plural='kopfexamples',
-                namespace=name[0],
-                name=name[1],
-            )
-            requires = res.spec.get('requires', None)
-            if namespace + seed_name in requires:
-                return True
-            if requires is not None:
-                has_dependency_cycle(seed_name, namespace, requires)
-        except ApiException as e:
-            logging.error('error checking for dependency cycle: {}'.format(e))
-    return False
+    api = client.CustomObjectsApi()
+    visited_seeds = []
+    def check(requires):
+        for re in requires:
+            # namespace/seed_name
+            name = re.split("/")
+            if re in visited_seeds:
+                continue
+            try:
+                res = api.get_namespaced_custom_object_status(
+                    group='kopf.dev', 
+                    version='v1',
+                    plural='kopfexamples',
+                    namespace=name[0],
+                    name=name[1],
+                )
+                new_requires = res['spec'].get('requires', None)
+                visited_seeds.append(re)
+                if new_requires is None:
+                    continue
+                if "{}/{}".format(namespace, seed_name) in new_requires:
+                    return True
+                if check(new_requires):
+                    return True
+            except ApiException as e:
+                logging.error('error checking for dependency cycle: {}'.format(e))
+        return False
+    return check(requires)
 
 
-def resolveRequires(requires):
+def resolve_requires(client, requires):
     if requires == None:
         return
-    api = kubernetes.client.CustomObjectsApi()
+    api = client.CustomObjectsApi()
     for re in requires:
         # namespace/seed_name
         name = re.split("/")
@@ -116,13 +111,14 @@ def resolveRequires(requires):
         if res is None:
             raise kopf.TemporaryError('cannot find dependency {}'.format(re))
         # check if the operator has added the annotation yet
-        if res['metadata']['annotations']['kopf.zalando.org/last-handled-configuration'] == None:
+        annotations = res['metadata']['annotations']
+        if 'seeder.ccloud.sap.com/last-handled-configuration' not in annotations:
             raise kopf.TemporaryError('dependency not reconsiled yet')
 
         # compare the last handled state with the actual crd state. We only care about spec changes
-        lastHandled = json.loads(res['metadata']['annotations']['kopf.zalando.org/last-handled-configuration'])
+        lastHandled = json.loads(res['metadata']['annotations']['seeder.ccloud.sap.com/last-handled-configuration'])
         if lastHandled['spec'] != res['spec']:
-            raise kopf.TemporaryError('dependency not reconsiled yet')
+            raise kopf.TemporaryError('dependency not reconsiled with latest configuration yet')
 
 
 def setup_logging(args):
@@ -158,6 +154,7 @@ def get_args():
 
 
 def main():
+    from seeder_ccloud.seeder import Seeder
     args = get_args()
     setup_logging(args)
     verbose = True if args.logLevel == 'DEBUG' else False 

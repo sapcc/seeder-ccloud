@@ -13,11 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
-
-from novaclient import exceptions as novaexceptions
-from keystoneclient import exceptions
-
+import logging, kopf
+from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
@@ -26,10 +23,26 @@ class Quota_Class_Sets(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
-   
+
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.quota_class_sets')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.quota_class_sets')
+    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} quota_class_sets'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+        try:
+            memo['seeder'].all_seedtypes['quota_class_sets'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+
+
     def seed(self, quota_class_sets):
         for quota_class, quotas in quota_class_sets.items():
             self._seed_quota_class_sets(quota_class, quotas)
+
 
     def _seed_quota_class_sets(self, quota_class, quotas):
         # this have been patched into Nova to create custom quotas (flavor based)

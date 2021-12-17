@@ -13,15 +13,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
-
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
-
-
-class Billing(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, seeder, dry_run=False):
-        super().__init__(args, seeder, dry_run)
-
-   
-    def seed(self, billing):
-        pass

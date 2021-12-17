@@ -16,38 +16,26 @@
 import logging, kopf
 from seeder_ccloud import utils
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
-from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 
-class Traits(BaseRegisteredSeedTypeClass):
+class Billings(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
-        self.openstack = OpenstackHelper(self.args)
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.traits')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.traits')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.billings')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.billings')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
-        logging.info('seeding {} traits'.format(name))
+        logging.info('seeding {} billings'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
         try:
-            memo['seeder'].all_seedtypes['traits'].seed(new)
+            memo['seeder'].all_seedtypes['billings'].seed(new)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
-
-    def seed(self, traits):
-        logging.info('seeding traits')
-        for trait in traits:
-            self._seed_trait(trait)
-
-    
-    def _seed_trait(self, trait):
-        try:
-            if not self.dry_run:
-                self.openstack.get_placementclient().request('PUT', '/traits/{}'.format(trait))
-        except Exception as e:
-            logging.error("Failed to seed trait %s: %s" % (trait, e))
+   
+    def seed(self, billing):
+        pass

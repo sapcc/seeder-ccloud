@@ -13,9 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
-import re
-
+import logging, re, kopf
+from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
@@ -26,6 +25,20 @@ class Rbac_Policies(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
+
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.rbac_policies')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.rbac_policies')
+    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} rbac_policies'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+        try:
+            memo['seeder'].all_seedtypes['rbac_policies'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
     def seed(self, rbac_policies):

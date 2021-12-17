@@ -13,10 +13,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-import logging
+import kopf, logging
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud import utils
 
 from deepdiff import DeepDiff
 
@@ -25,6 +25,21 @@ class Regions(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
+
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.regions')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.regions')
+    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} regions'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+        return
+        try:
+            memo['seeder'].all_seedtypes['regions'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+
    
     def seed(self, regions):
         logging.info('seeding regions')

@@ -13,10 +13,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
+import logging, kopf
+from seeder_ccloud import utils
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-
 from osc_placement.resources.resource_class import PER_CLASS_URL
 
 
@@ -24,7 +24,22 @@ class Resource_Classes(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
-   
+
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.resource_classes')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.resource_classes')
+    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} resource_classes'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+        try:
+            memo['seeder'].all_seedtypes['resource_classes'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+
+
     def seed(self, resource_classes):
         logging.info('seeding resource_classes')
         for resource_class in resource_classes:

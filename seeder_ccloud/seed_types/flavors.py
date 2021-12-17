@@ -14,18 +14,37 @@
  limitations under the License.
 """
 import logging
+import kopf
+import logging
 
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
+from seeder_ccloud import utils
 
 from deepdiff import DeepDiff
 from novaclient import exceptions as novaexceptions
+
 
 class Flavors(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(self.args)
-   
+
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.flavors')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.flavors')
+    def seed_flavor_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} flavor'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+        return
+        try:
+            memo['seeder'].all_seedtypes['flavors'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+
+
     def seed(self, flavors):
         resource_classes: set[str] = set()
         traits: set[str] = set()
@@ -67,6 +86,7 @@ class Flavors(BaseRegisteredSeedTypeClass):
         # seed the missing traits and resource_classes
         self.seeder.all_seedtypes['resource_classes'].seed(set(self.seeder.get_spec()['resource_classes']) - resource_classes)
         self.seeder.all_seedtypes['traits'].seed(set(self.seeder.get_spec()['traits']) - traits)
+
 
     def _seed_flavor(self, flavor):
         logging.debug("seeding flavor %s" % flavor)

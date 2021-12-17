@@ -15,12 +15,11 @@
 """
 
 import logging
-import argparse
-import sys
 # Here we import the seed_types for the SeedTypeRegistry.
 # The order of importing => order of execution 
 from seeder_ccloud.seed_types.regions import Regions
-from seeder_ccloud.seed_types.roles import Roles
+from seeder_ccloud.seed_types.flavors import Flavors
+from seeder_ccloud.seed_types.domains import Domains
 
 from seeder_ccloud.seed_type_registry import SeedTypeRegistryBase
 

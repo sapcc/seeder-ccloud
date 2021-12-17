@@ -17,7 +17,5 @@ class TestSeedTypeRegistry(unittest.TestCase):
         from seeder_ccloud.seed_types.traits import Traits
         from seeder_ccloud.seed_types.quota_class_sets import Quota_Class_Sets
         from seeder_ccloud.seed_types.share_types import Share_Types
-
-
         
         self.assertEqual(len(SeedTypeRegistryBase.SEED_TYPE_REGISTRY), 13)

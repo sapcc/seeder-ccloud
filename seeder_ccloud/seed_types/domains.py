@@ -15,7 +15,7 @@
 """
 import logging
 from seeder_ccloud import utils
-
+import kopf
 from seeder_ccloud.openstack.domain.groups import Groups
 from seeder_ccloud.openstack.domain.projects import Projects
 from seeder_ccloud.openstack.domain.role_assignments import Role_Assignments
@@ -32,6 +32,19 @@ class Domains(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(args)
+
+    @staticmethod
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.domains')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.domains')
+    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+        logging.info('seeding {} domains'.format(name))
+        if not utils.is_dependency_successful(annotations):
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+        return
+        try:
+            memo['seeder'].all_seedtypes['domains'].seed(new)
+        except Exception as error:
+            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
    
     def seed(self, domains):
