@@ -14,6 +14,7 @@
  limitations under the License.
 """
 import logging, kopf
+from seeder_operator import OPERATOR_ANNOTATION
 from seeder_ccloud import utils
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
@@ -24,8 +25,8 @@ class Billings(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.billings')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.billings')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.billings')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.billings')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} billings'.format(name))
         if not utils.is_dependency_successful(annotations):

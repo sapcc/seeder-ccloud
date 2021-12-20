@@ -17,6 +17,7 @@
 import difflib
 import pprint
 import json
+from seeder_operator import PREFIX
 
 
 # https://github.com/python/cpython/blob/3.8/Lib/unittest/case.py#L1201
@@ -32,11 +33,11 @@ def diff_exclude_password_callback(obj, path):
 
 def is_dependency_successful(annotations):
     dep = None
-    if 'seeder.ccloud.sap.com/check_dependencies' in annotations:
-        dep = annotations.get('seeder.ccloud.sap.com/check_dependencies', None)
+    if PREFIX + '/check_dependencies' in annotations:
+        dep = annotations.get(PREFIX + '/check_dependencies', None)
 
-    if 'seeder.ccloud.sap.com/check_dependencies.spec.requires' in annotations:
-        dep = annotations.get('seeder.ccloud.sap.com/check_dependencies.spec.requires', None)
+    if PREFIX + '/check_dependencies.spec.requires' in annotations:
+        dep = annotations.get(PREFIX + '/check_dependencies.spec.requires', None)
 
     if dep is None:
         return False

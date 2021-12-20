@@ -25,6 +25,9 @@ from kubernetes.client import api_client
 from kubernetes.client.rest import ApiException
 from keystoneauth1.loading import cli
 
+PREFIX = 'seeder.ccloud.sap.com'
+OPERATOR_ANNOTATION = 'seeder-ccloud'
+
 
 @kopf.on.startup()
 async def startup(settings: kopf.OperatorSettings, **kwargs):
@@ -39,14 +42,14 @@ async def startup(settings: kopf.OperatorSettings, **kwargs):
 
     settings.execution.max_workers = args.max_workers
     settings.persistence.diffbase_storage = kopf.AnnotationsDiffBaseStorage(
-        prefix='seeder.ccloud.sap.com',
+        prefix=PREFIX,
         key='last-handled-configuration',
     )
-    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix='seeder.ccloud.sap.com')
+    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=PREFIX)
 
 
-@kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'})
-@kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.requires', value=kopf.PRESENT)
+@kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION})
+@kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.requires', value=kopf.PRESENT)
 def check_dependencies(spec, new, name, namespace, **kwargs):
     requires = spec.get('requires', None)
     if not requires:
@@ -112,11 +115,11 @@ def resolve_requires(client, requires):
             raise kopf.TemporaryError('cannot find dependency {}'.format(re))
         # check if the operator has added the annotation yet
         annotations = res['metadata']['annotations']
-        if 'seeder.ccloud.sap.com/last-handled-configuration' not in annotations:
+        if PREFIX + '/last-handled-configuration' not in annotations:
             raise kopf.TemporaryError('dependency not reconsiled yet')
 
         # compare the last handled state with the actual crd state. We only care about spec changes
-        lastHandled = json.loads(res['metadata']['annotations']['seeder.ccloud.sap.com/last-handled-configuration'])
+        lastHandled = json.loads(res['metadata']['annotations'][PREFIX + '/last-handled-configuration'])
         if lastHandled['spec'] != res['spec']:
             raise kopf.TemporaryError('dependency not reconsiled with latest configuration yet')
 

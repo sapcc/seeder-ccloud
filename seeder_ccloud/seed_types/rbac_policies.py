@@ -14,6 +14,7 @@
  limitations under the License.
 """
 import logging, re, kopf
+from seeder_operator import OPERATOR_ANNOTATION
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
@@ -28,8 +29,8 @@ class Rbac_Policies(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.rbac_policies')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.rbac_policies')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.rbac_policies')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.rbac_policies')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} rbac_policies'.format(name))
         if not utils.is_dependency_successful(annotations):

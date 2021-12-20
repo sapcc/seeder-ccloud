@@ -13,10 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
-import kopf
-import logging
-
+import kopf, logging
+from seeder_operator import OPERATOR_ANNOTATION
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud import utils
@@ -32,20 +30,19 @@ class Flavors(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.flavors')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.flavors')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
     def seed_flavor_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} flavor'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-        return
         try:
-            memo['seeder'].all_seedtypes['flavors'].seed(new)
+            memo['seeder'].all_seedtypes['flavors'].seed(new, spec)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
-    def seed(self, flavors):
+    def seed(self, flavors, spec):
         resource_classes: set[str] = set()
         traits: set[str] = set()
         for flavor in flavors:
@@ -84,8 +81,10 @@ class Flavors(BaseRegisteredSeedTypeClass):
                     "and then wait for the seeder to run again.")
 
         # seed the missing traits and resource_classes
-        self.seeder.all_seedtypes['resource_classes'].seed(set(self.seeder.get_spec()['resource_classes']) - resource_classes)
-        self.seeder.all_seedtypes['traits'].seed(set(self.seeder.get_spec()['traits']) - traits)
+        if 'resource_classes' in spec:
+            self.seeder.all_seedtypes['resource_classes'].seed(set(spec['resource_classes']) - resource_classes)
+        if 'traits' in spec:
+            self.seeder.all_seedtypes['traits'].seed(set(spec['traits']) - traits)
 
 
     def _seed_flavor(self, flavor):

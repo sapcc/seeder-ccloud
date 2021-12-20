@@ -14,6 +14,7 @@
  limitations under the License.
 """
 import kopf, logging
+from seeder_operator import OPERATOR_ANNOTATION
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
@@ -28,19 +29,18 @@ class Regions(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.regions')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.regions')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.regions')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.regions')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} regions'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-        return
         try:
             memo['seeder'].all_seedtypes['regions'].seed(new)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
-   
+
     def seed(self, regions):
         logging.info('seeding regions')
         # seed parent regions
@@ -51,6 +51,7 @@ class Regions(BaseRegisteredSeedTypeClass):
         for region in regions:
             if 'parent_region' in region:
                 self._seed_region(region)
+
 
     def _seed_region(self, region):
         """ seed a keystone region """

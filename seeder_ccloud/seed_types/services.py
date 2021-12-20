@@ -15,6 +15,7 @@
 """
 
 import logging, kopf
+from seeder_operator import OPERATOR_ANNOTATION
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
@@ -28,8 +29,8 @@ class Services(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.services')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.services')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} services'.format(name))
         if not utils.is_dependency_successful(annotations):

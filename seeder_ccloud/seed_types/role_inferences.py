@@ -14,7 +14,7 @@
  limitations under the License.
 """
 import logging, kopf
-
+from seeder_operator import OPERATOR_ANNOTATION
 from novaclient import exceptions as novaexceptions
 from keystoneclient import exceptions
 from seeder_ccloud import utils
@@ -29,8 +29,8 @@ class Role_Inferences(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.role_inferences')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': 'version2'}, field='spec.role_inferences')
+    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
+    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} role_inferences'.format(name))
         if not utils.is_dependency_successful(annotations):
