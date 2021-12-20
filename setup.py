@@ -17,6 +17,7 @@ setup(
         'kopf',
         'kubernetes_asyncio',
         'deepdiff',
+        'prometheus_client',
     ],
     url='https://github.com/sapcc/seeder-ccloud',
     license='',
