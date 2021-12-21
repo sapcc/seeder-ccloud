@@ -2,6 +2,9 @@ from prometheus_client import start_http_server
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from kubernetes import client, config
 from time import sleep
+import json
+from kopf._cogs.structs import bodies, ids
+from seeder_operator import PREFIX
 
 
 try:
@@ -24,10 +27,15 @@ class SeedsCollector(object):
             version='v1',
             plural='kopfexamples',
         )
-        total.add_metric(labels=[], value=1.0)
+        total.add_metric(labels=[], value=len(seeds['items']))
         yield total
         for seed in seeds['items']:
-            status.add_metric(labels=[seed['metadata']['name']], value=1.0)
+            meta = bodies.Meta(seed)
+            lastHandled = json.loads(meta.annotations[PREFIX + '/last-handled-configuration'])
+            if lastHandled['spec'] != seed['spec']:
+                status.add_metric(labels=[meta.name], value=0.0)
+            else:
+                status.add_metric(labels=[meta.name], value=1.0)
         yield status
 
 
