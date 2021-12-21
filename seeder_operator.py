@@ -152,6 +152,9 @@ def get_args():
                         help='Only parse the seed, do no actual seeding.')
     parser.add_argument('--max-workers', default=1, action='store_true',
                         help='Max workers for the kopf operator.')
+    parser.add_argument("--namespace-patterns", dest="namespaces",
+                        help="list of namespace patterns. default is cluster wide",
+                        default='')
     cli.register_argparse_arguments(parser, sys.argv[1:])
     return parser.parse_args()
 
@@ -166,7 +169,17 @@ def main():
     # either threading.Event(), or asyncio.Event(), or asyncio/concurrent Future().
     memo = kopf.Memo(my_stop_flag=threading.Event())
     memo.seeder = Seeder(args)
-    asyncio.run(kopf.operator(memo=memo, stop_flag=memo.my_stop_flag))
+    clusterwide = True
+    if args.namespaces:
+        clusterwide = False
+
+    asyncio.run(kopf.operator(
+        memo=memo, 
+        stop_flag=memo.my_stop_flag,
+        clusterwide=clusterwide,
+        standalone=True,
+        namespace= args.namespaces
+    ))
 
 
 if __name__ == '__main__':
