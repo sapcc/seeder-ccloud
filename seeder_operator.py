@@ -24,10 +24,16 @@ import kubernetes_asyncio
 from kubernetes.client import api_client
 from kubernetes.client.rest import ApiException
 from keystoneauth1.loading import cli
+from kopf._cogs.structs import bodies
 
 PREFIX = 'seeder.ccloud.sap.com'
 OPERATOR_ANNOTATION = 'seeder-ccloud'
 
+
+operator_storage = kopf.AnnotationsDiffBaseStorage(
+    prefix=PREFIX,
+    key='last-handled-configuration',
+)
 
 @kopf.on.startup()
 async def startup(settings: kopf.OperatorSettings, **kwargs):
@@ -41,10 +47,7 @@ async def startup(settings: kopf.OperatorSettings, **kwargs):
         await kubernetes_asyncio.config.load_kube_config()
 
     settings.execution.max_workers = args.max_workers
-    settings.persistence.diffbase_storage = kopf.AnnotationsDiffBaseStorage(
-        prefix=PREFIX,
-        key='last-handled-configuration',
-    )
+    settings.persistence.diffbase_storage = operator_storage
     settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=PREFIX)
 
 
@@ -113,14 +116,14 @@ def resolve_requires(client, requires):
         )
         if res is None:
             raise kopf.TemporaryError('cannot find dependency {}'.format(re))
-        # check if the operator has added the annotation yet
-        annotations = res['metadata']['annotations']
-        if PREFIX + '/last-handled-configuration' not in annotations:
+        # check if the operator has added the annotation yet        
+        body = bodies.Body(res)
+        last_handled = operator_storage.fetch(body=body)
+        if last_handled is None:
             raise kopf.TemporaryError('dependency not reconsiled yet')
 
         # compare the last handled state with the actual crd state. We only care about spec changes
-        lastHandled = json.loads(res['metadata']['annotations'][PREFIX + '/last-handled-configuration'])
-        if lastHandled['spec'] != res['spec']:
+        if last_handled['spec'] != res['spec']:
             raise kopf.TemporaryError('dependency not reconsiled with latest configuration yet')
 
 
