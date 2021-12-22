@@ -29,6 +29,12 @@ from kopf._cogs.structs import bodies
 PREFIX = 'seeder.ccloud.sap.com'
 OPERATOR_ANNOTATION = 'seeder-ccloud'
 
+SEED_CRD = {
+    'version': 'v1',
+    'group': 'kopf.dev',
+    'kind': 'kopfexample',
+    'plural': 'kopfexamples',
+}
 
 operator_storage = kopf.AnnotationsDiffBaseStorage(
     prefix=PREFIX,
@@ -51,8 +57,8 @@ async def startup(settings: kopf.OperatorSettings, **kwargs):
     settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=PREFIX)
 
 
-@kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION})
-@kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.requires', value=kopf.PRESENT)
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION})
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.requires', value=kopf.PRESENT)
 def check_dependencies(spec, new, name, namespace, **kwargs):
     requires = spec.get('requires', None)
     if not requires:
@@ -80,9 +86,9 @@ def has_dependency_cycle(client, seed_name, namespace, requires):
                 continue
             try:
                 res = api.get_namespaced_custom_object_status(
-                    group='kopf.dev', 
-                    version='v1',
-                    plural='kopfexamples',
+                    group=SEED_CRD['group'], 
+                    version=SEED_CRD['version'],
+                    plural=SEED_CRD['plural'],
                     namespace=name[0],
                     name=name[1],
                 )
@@ -108,9 +114,9 @@ def resolve_requires(client, requires):
         # namespace/seed_name
         name = re.split("/")
         res = api.get_namespaced_custom_object_status(
-            group='kopf.dev', 
-            version='v1',
-            plural='kopfexamples',
+            group=SEED_CRD['group'], 
+            version=SEED_CRD['version'],
+            plural=SEED_CRD['plural'],
             namespace=name[0],
             name=name[1],
         )

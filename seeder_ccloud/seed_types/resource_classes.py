@@ -14,7 +14,7 @@
  limitations under the License.
 """
 import logging, kopf
-from seeder_operator import OPERATOR_ANNOTATION
+from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -28,8 +28,8 @@ class Resource_Classes(BaseRegisteredSeedTypeClass):
 
 
     @staticmethod
-    @kopf.on.update('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
-    @kopf.on.create('kopfexamples', annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
+    @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
+    @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
     def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
         logging.info('seeding {} resource_classes'.format(name))
         if not utils.is_dependency_successful(annotations):

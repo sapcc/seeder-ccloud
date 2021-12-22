@@ -4,7 +4,7 @@ from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from kubernetes import client, config
 from time import sleep
 from kopf._cogs.structs import bodies
-from seeder_operator import PREFIX
+from seeder_operator import PREFIX, SEED_CRD
 import logging
 
 try:
@@ -23,9 +23,9 @@ class SeedsCollector(object):
         status = GaugeMetricFamily('ccloud_seeds_status', 'Shows the status of a single seed', labels=['name'])
         api = client.CustomObjectsApi()
         seeds = api.list_cluster_custom_object(
-            group='kopf.dev', 
-            version='v1',
-            plural='kopfexamples',
+            group=SEED_CRD['group'], 
+            version=SEED_CRD['version'],
+            plural=SEED_CRD['plural'],
         )
         total.add_metric(labels=[], value=len(seeds['items']))
         yield total
