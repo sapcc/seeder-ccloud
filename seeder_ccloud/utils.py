@@ -32,15 +32,10 @@ def diff_exclude_password_callback(obj, path):
 
 
 def is_dependency_successful(annotations):
-    dep = None
-    if PREFIX + '/check_dependencies' in annotations:
-        dep = annotations.get(PREFIX + '/check_dependencies', None)
-
-    if PREFIX + '/check_dependencies.spec.requires' in annotations:
-        dep = annotations.get(PREFIX + '/check_dependencies.spec.requires', None)
+    dep = annotations.get(PREFIX + '/check_dependencies', None)
 
     if dep is None:
-        return False
+        return True
         
     depStatus = json.loads(dep)
     if not depStatus['success']:
