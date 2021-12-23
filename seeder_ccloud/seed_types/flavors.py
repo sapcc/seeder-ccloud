@@ -57,15 +57,13 @@ class Flavors(BaseRegisteredSeedTypeClass):
                 continue
 
             required_traits, mentioned_traits, required_resource_classes = self._get_traits_and_resource_classes(flavor)
-            missing_traits = list(mentioned_traits - set(self._get_traits()))
-            associated_traits = set(self._get_traits(only_associated=True))
-
+            missing_traits = list(mentioned_traits - set(self.openstack.get_traits()))
+            associated_traits = set(self.openstack.get_traits(only_associated=True))
             resource_classes.update(required_resource_classes)
             traits.update(missing_traits)
-            
             if missing_traits:
                 logging.info("Found traits mentioned in flavors missing in Nova: {}".format(missing_traits))    
-            if not required_traits:   
+            if not required_traits:
                 self._seed_flavor(flavor)
                 continue
             missing_req_traits = required_traits - associated_traits
@@ -113,11 +111,11 @@ class Flavors(BaseRegisteredSeedTypeClass):
                     flavor_cmp['OS-FLV-EXT-DATA:ephemeral'] = flavor_cmp.pop('ephemeral')
 
                 # check for delta
-                diff = DeepDiff(resource, flavor_cmp)
-                if len(diff.keys()) > 0:
+                diff = DeepDiff(flavor_cmp, resource.to_dict())
+                if 'values_changed' in diff:
                     logging.info(
                         "deleting flavor '%s' to re-create, since it differs '%s'" %
-                        (flavor['name'], diff))
+                        (flavor['name'], diff['values_changed']))
                     if not self.dry_run:
                         resource.delete()
                         create = True
