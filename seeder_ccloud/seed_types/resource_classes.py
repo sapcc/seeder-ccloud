@@ -30,7 +30,7 @@ class Resource_Classes(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_resource_classes_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} resource_classes'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)

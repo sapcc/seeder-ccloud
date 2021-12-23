@@ -29,7 +29,7 @@ class Traits(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.traits')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.traits')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_traits_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} traits'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)

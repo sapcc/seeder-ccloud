@@ -36,7 +36,7 @@ class Domains(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_domains_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} domains'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -94,8 +94,8 @@ class Domains(BaseRegisteredSeedTypeClass):
                 resource = keystone.domains.create(**domain)
         else:
             resource = result[0]
-            diff = DeepDiff(resource, domain)
-            if len(diff.keys()) > 0:
+            diff = DeepDiff(domain, resource.to_dict())
+            if 'values_changed' in diff:
                 if not self.dry_run:
                 #if not self._domain_config_equal(driver, result.to_dict()):
                     logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
@@ -153,8 +153,8 @@ class Domains(BaseRegisteredSeedTypeClass):
         # get the current domain configuration
         try:
             result = keystone.domain_configs.get(domain)
-            diff = DeepDiff(result, driver, exclude_obj_callback=utils.diff_exclude_password_callback)
-            if len(diff.keys()) > 0:
+            diff = DeepDiff(driver, result.to_dict(), exclude_obj_callback=utils.diff_exclude_password_callback)
+            if 'values_changed' in diff:
                 if not self.dry_run:
                 #if not self._domain_config_equal(driver, result.to_dict()):
                     logging.debug("domain %s differs: '%s'" % (domain['name'], diff))

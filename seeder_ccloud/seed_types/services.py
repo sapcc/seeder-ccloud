@@ -31,7 +31,7 @@ class Services(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_services_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} services'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -73,8 +73,8 @@ class Services(BaseRegisteredSeedTypeClass):
                 resource = self.openstack.get_keystoneclient().services.create(**service)
         else:
             resource = result[0]
-            diff = DeepDiff(resource, service)
-            if len(diff.keys()) > 0:
+            diff = DeepDiff(service, resource.to_dict())
+            if 'values_changed' in diff:
                 logging.debug("endpoint %s differs: '%s'" % (service['name'], diff))
                 if not self.dry_run:
                     self.openstack.get_keystoneclient().services.update(resource.id, **service)

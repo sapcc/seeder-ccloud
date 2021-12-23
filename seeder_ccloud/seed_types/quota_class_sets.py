@@ -29,7 +29,7 @@ class Quota_Class_Sets(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.quota_class_sets')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.quota_class_sets')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_quota_class_sets_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} quota_class_sets'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)

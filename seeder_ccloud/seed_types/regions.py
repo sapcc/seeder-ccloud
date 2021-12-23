@@ -31,7 +31,7 @@ class Regions(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.regions')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.regions')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_regions_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} regions'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -74,12 +74,11 @@ class Regions(BaseRegisteredSeedTypeClass):
             if not self.dry_run:
                 self.openstack.get_keystoneclient().regions.create(**region)
         else:  # wtf: why can't they deal with parent_region(_id) consistently
-            wtf = region.copy()
-            if 'parent_region' in wtf:
-                wtf['parent_region_id'] = wtf.pop('parent_region')
-
-            diff = DeepDiff(result, wtf)
-            if len(diff.keys()) > 0:
+            region_copy = region.copy()
+            if 'parent_region' in region_copy:
+                region_copy['parent_region_id'] = region_copy.pop('parent_region')
+            diff = DeepDiff(region_copy, result.to_dict())
+            if 'values_changed' in diff:
                 logging.debug("region %s differs: '%s'" % (region['name'], diff))
                 if not self.dry_run:
                     self.openstack.get_keystoneclient().regions.update(result.id, **region)

@@ -31,7 +31,7 @@ class Roles(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.roles')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.roles')
-    def seed_domains_handler(memo: kopf.Memo, old, new, spec, name, annotations, **kwargs):
+    def seed_roles_handler(memo: kopf.Memo, new, name, annotations, **_):
         logging.info('seeding {} roles'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -63,8 +63,8 @@ class Roles(BaseRegisteredSeedTypeClass):
                 resource = self.openstack.get_keystoneclient().roles.create(**role)
         else:
             resource = result[0]
-            diff = DeepDiff(resource, role)
-            if len(diff.keys()) > 0:
+            diff = DeepDiff(role, resource.to_dict())
+            if 'values_changed' in diff:
                 logging.debug("role %s differs: '%s'" % (role['name'], diff))
                 if not self.dry_run:
                     self.openstack.get_keystoneclient().roles.update(resource.id, **role)
