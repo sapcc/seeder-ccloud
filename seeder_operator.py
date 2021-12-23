@@ -20,8 +20,7 @@ import json
 import sys
 import logging
 import argparse
-import kubernetes_asyncio
-from kubernetes.client import api_client
+from kubernetes import config, client
 from kubernetes.client.rest import ApiException
 from keystoneauth1.loading import cli
 from kopf._cogs.structs import bodies
@@ -42,41 +41,41 @@ operator_storage = kopf.AnnotationsDiffBaseStorage(
 )
 
 @kopf.on.startup()
-async def startup(settings: kopf.OperatorSettings, **kwargs):
+def startup(settings: kopf.OperatorSettings, **kwargs):
     args = get_args()
     # Load kubernetes_asyncio config as kopf does not do that automatically for us.
     try:
-        # Try incluster config first.
-        kubernetes_asyncio.config.load_incluster_config()
-    except kubernetes_asyncio.config.ConfigException:
-        # Fall back to regular config.
-        await kubernetes_asyncio.config.load_kube_config()
+        config.load_kube_config()
+    except config.ConfigException:
+        config.load_incluster_config()
 
-    settings.execution.max_workers = args.max_workers
+    logging.info('starting operator with {} workers'.format(int(args.max_workers)))
+    settings.execution.max_workers = int(args.max_workers)
     settings.persistence.diffbase_storage = operator_storage
     settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=PREFIX)
 
 
 @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION})
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.requires', value=kopf.PRESENT)
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION})
 def check_dependencies(spec, new, name, namespace, **kwargs):
     requires = spec.get('requires', None)
+    logging.info('checking dependencies for seed {}'.format(name))
     if not requires:
         return
-    if has_dependency_cycle(api_client, name, namespace, requires):
+    if has_dependency_cycle(client, name, namespace, requires):
         raise kopf.TemporaryError('dependency cycle', delay=300)
     try:
-        resolve_requires(api_client, requires)
+        resolve_requires(client, requires)
     except kopf.TemporaryError as error:
         raise kopf.TemporaryError('{}'.format(error), delay=30)
     except Exception as error:
         raise kopf.TemporaryError('{}'.format(error), delay=30)
 
 
-def has_dependency_cycle(client, seed_name, namespace, requires):
+def has_dependency_cycle(k8s_client, seed_name, namespace, requires):
     if requires is None:
         return False
-    api = client.CustomObjectsApi()
+    api = k8s_client.CustomObjectsApi()
     visited_seeds = []
     def check(requires):
         for re in requires:
@@ -106,10 +105,10 @@ def has_dependency_cycle(client, seed_name, namespace, requires):
     return check(requires)
 
 
-def resolve_requires(client, requires):
+def resolve_requires(k8s_client, requires):
     if requires == None:
         return
-    api = client.CustomObjectsApi()
+    api = k8s_client.CustomObjectsApi()
     for re in requires:
         # namespace/seed_name
         name = re.split("/")
@@ -159,7 +158,7 @@ def get_args():
                         default='INFO')
     parser.add_argument('--dry-run', default=False, action='store_true',
                         help='Only parse the seed, do no actual seeding.')
-    parser.add_argument('--max-workers', default=1, action='store_true',
+    parser.add_argument('--max-workers', default=1, dest="max_workers",
                         help='Max workers for the kopf operator.')
     parser.add_argument("--namespace-patterns", dest="namespaces",
                         help="list of namespace patterns. default is cluster wide",
