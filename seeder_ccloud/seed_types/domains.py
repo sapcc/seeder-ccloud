@@ -33,7 +33,28 @@ def validate(spec, dryrun, **_):
     domains = spec.get('domains', [])
     for domain in domains:
         if 'name' not in domain or not domain['name']:
-            raise kopf.AdmissionError("Flavors must have a name if present..")
+            raise kopf.AdmissionError("Domains must have a name if present..")
+        groups = domain.get('groups', [])
+        for group in groups:
+            if 'name' not in group or not group['name']:
+                raise kopf.AdmissionError("Groups must have a name if present..")
+        users = domain.get('users', [])
+        for user in users:
+            if 'name' not in user or not user['name']:
+                raise kopf.AdmissionError("Users must have a name if present..")
+        projects = domain.get('projects', [])
+        for project in projects:
+            if 'name' not in project or not project['name']:
+                raise kopf.AdmissionError("Projects must have a name if present..")
+            networks = project.get('networks', [])
+            for network in networks:
+                if 'name' not in network or not network['name']:
+                    raise kopf.AdmissionError("Networks must have a name if present..")
+                tags = network.get('tags', [])
+                for tag in tags:
+                    if not tag or len(tag) > 60:
+                        raise kopf.AdmissionError("Tags size must not be > 60 if present..")
+
 
 
 class Domains(BaseRegisteredSeedTypeClass):
@@ -89,11 +110,6 @@ class Domains(BaseRegisteredSeedTypeClass):
             ra = domain.pop('role_assignments', None)
 
         domain = self.openstack.sanitize(domain, ('name', 'description', 'enabled'))
-
-        if 'name' not in domain or not domain['name']:
-            logging.warn(
-                "skipping domain '%s', since it is misconfigured" % domain)
-            return
 
         result = keystone.domains.list(name=domain['name'])
         if not result:

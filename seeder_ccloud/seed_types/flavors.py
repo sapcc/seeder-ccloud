@@ -46,6 +46,10 @@ def validate(spec, dryrun, **_):
             raise kopf.AdmissionError("Flavors must have a name if present..")
         if 'id' not in flavor or not flavor['id']:
             raise kopf.AdmissionError("Flavors must have an id if present.")
+        if 'extra_specs' in flavor:
+            extra_specs = flavor['extra_specs']
+            if not isinstance(extra_specs, dict):
+                raise kopf.AdmissionError("extra_specs must be a valid dict if present.")
 
 
 class Flavors(BaseRegisteredSeedTypeClass):
@@ -177,10 +181,6 @@ class Flavors(BaseRegisteredSeedTypeClass):
         required_resource_classes = set()
         if 'extra_specs' in flavor:
                 extra_specs = flavor['extra_specs']
-                if not isinstance(extra_specs, dict):
-                    logging.warn("skipping flavor '{}', since it has invalid extra_specs"
-                                .format(flavor))
-                    return
                 required_traits = set()
                 for k, v in extra_specs.items():
                     if k.startswith('resources:CUSTOM_'):

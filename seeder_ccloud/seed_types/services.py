@@ -31,6 +31,24 @@ def validate(spec, dryrun, **_):
             raise kopf.AdmissionError("Service must have a name if present..")
         if 'type' not in service or not service['type']:
             raise kopf.AdmissionError("Service must have a type if present..")
+        endpoints = service.get('endpoints', [])
+        for endpoint in endpoints:
+            if 'interface' not in endpoint or not endpoint['interface']:
+                raise kopf.AdmissionError("Endpoints must have an interface if present..")
+            if 'url' not in endpoint or not endpoint['url']:
+                raise kopf.AdmissionError("Endpoints must have a url if present..")
+            if 'region' not in endpoint or not endpoint['region']:
+                raise kopf.AdmissionError("Endpoints must have a region if present..")
+            try:
+                parsed = urlparse(endpoint['url'])
+                if not parsed.scheme or not parsed.netloc:
+                    raise kopf.AdmissionError("Endpoint url must be vaild if present..")
+            except Exception:
+                raise kopf.AdmissionError("Endpoint url must be vaild if present..")
+            if 'region' in endpoint:
+                region = endpoint['region']
+                if not region or not region.strip():
+                    raise kopf.AdmissionError("Endpoint region must be vaild if present..")
 
 
 class Services(BaseRegisteredSeedTypeClass):
@@ -96,39 +114,8 @@ class Services(BaseRegisteredSeedTypeClass):
         for endpoint in endpoints:
             endpoint = self.openstack.sanitize(endpoint, (
                 'interface', 'region', 'url', 'enabled', 'name'))
-            if 'interface' not in endpoint or not endpoint['interface']:
-                logging.warn(
-                    "skipping endpoint '%s/%s', since it is misconfigured" % (
-                        service['name'], endpoint))
-                continue
 
-            if 'url' not in endpoint or not endpoint['url']:
-                logging.warn(
-                    "skipping endpoint '%s/%s', since it has no URL configured" % (
-                        service.name, endpoint['interface']))
-                continue
-            try:
-                parsed = urlparse(endpoint['url'])
-                if not parsed.scheme or not parsed.netloc:
-                    logging.warn(
-                        "skipping endpoint '%s/%s', since its URL is misconfigured" % (
-                            service.name, endpoint['interface']))
-                    continue
-            except Exception:
-                logging.warn(
-                    "skipping endpoint '%s/%s', since its URL is misconfigured" % (
-                        service.name, endpoint['interface']))
-                continue
-
-            region = None
-            if 'region' in endpoint:
-                region = endpoint['region']
-                if not region or not region.strip():
-                    logging.warn(
-                        "skipping endpoint '%s/%s', since its region is misconfigured" % (
-                            service.name, endpoint['interface']))
-                    continue
-
+            region = endpoint.get('region', None)
             result = self.openstack.get_keystoneclient().endpoints.list(service=service.id,
                                             interface=endpoint[
                                                 'interface'],

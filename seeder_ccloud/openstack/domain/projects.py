@@ -95,12 +95,6 @@ class Projects():
             project = self.openstack.sanitize(project,
                             ('name', 'description', 'enabled', 'parent'))
 
-            if 'name' not in project or not project['name']:
-                logging.warn(
-                    "skipping project '%s/%s', since it is misconfigured" % (
-                        domain.name, project))
-                return
-
             # resolve parent project if specified
             if 'parent' in project:
                 parent_id = self.openstack.get_project_id(domain.name, project['parent'],

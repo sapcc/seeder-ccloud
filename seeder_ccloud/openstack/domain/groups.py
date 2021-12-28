@@ -48,13 +48,6 @@ class Groups():
             ra = group.pop('role_assignments')
 
         group = self.openstack.sanitize(group, ('name', 'description'))
-
-        if 'name' not in group or not group['name']:
-            logging.warn(
-                "skipping group '%s/%s', since it is misconfigured" %
-                (domain.name, group))
-            return
-
         result = keystone.groups.list(domain=domain.id,
                                     name=group['name'])
         if not result:

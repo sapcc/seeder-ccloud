@@ -84,7 +84,7 @@ class OpenstackHelper:
                             user_agent='openstack-seeder',
                             verify=not self.args.insecure)
 
-        designate = designateclient.Client(session=sess,
+        return designateclient.Client(session=sess,
                                         endpoint_type=self.args.interface + 'URL',
                                         all_projects=True)
 

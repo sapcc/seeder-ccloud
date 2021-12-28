@@ -62,12 +62,6 @@ class Project_Networks:
                     'router:external',
                     'shared', 'vlan_transparent', 'description'))
 
-                if 'name' not in network or not network['name']:
-                    logging.warn(
-                        "skipping network '%s/%s', since it is misconfigured" % (
-                            project.name, network))
-                    continue
-
                 body = {'network': network.copy()}
                 body['network']['tenant_id'] = project.id
                 query = {'tenant_id': project.id, 'name': network['name']}
@@ -115,12 +109,6 @@ class Project_Networks:
         neutron = self.openstack.get_neutronclient()
 
         for tag in tags:
-            if not tag or len(tag) > 60:
-                logging.warn(
-                    "skipping tag '%s/%s', since it is invalid" % (
-                        network['name'], tag))
-                continue
-
             if tag not in network['tags']:
                 logging.info(
                     "adding tag %s to network '%s'" % (

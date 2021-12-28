@@ -43,12 +43,6 @@ class Users():
                 'name', 'email', 'description', 'password', 'enabled',
                 'default_project'))
 
-            if 'name' not in user or not user['name']:
-                logging.warn(
-                    "skipping user '%s/%s', since it is misconfigured" % (
-                        domain.name, self.openstack.redact(user)))
-                return
-
             result = keystone.users.list(domain=domain.id,
                                         name=user['name'])
             if not result:
