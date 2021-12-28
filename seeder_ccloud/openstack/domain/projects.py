@@ -18,20 +18,20 @@ import logging
 from keystoneclient import exceptions
 from keystoneauth1 import exceptions as keystoneauthexceptions
 from designateclient.v2 import client as designateclient
-
+from deepdiff import DeepDiff
 from seeder_ccloud.openstack.domain.project_networks import Project_Networks
 from seeder_ccloud.openstack.domain.swift import Swift
-
-
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 class Projects():
-    def __init__(self, args):
+    def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
         self.networks = Project_Networks(args)
-   
+        self.dry_run = dry_run
+
+
     def seed(self, projects, domain):
         self.role_assignments = []
         for project in projects:
@@ -115,17 +115,16 @@ class Projects():
                 logging.info(
                     "create project '%s/%s'" % (
                         domain.name, project['name']))
-                resource = keystone.projects.create(domain=domain,
+                if not self.dry_run:
+                    resource = keystone.projects.create(domain=domain,
                                                     **project)
             else:
                 resource = result[0]
-                for attr in list(project.keys()):
-                    if project[attr] != resource._info.get(attr, ''):
-                        logging.info(
-                            "%s differs. update project '%s/%s'" % (
-                                attr, domain.name, project['name']))
+                diff = DeepDiff(project, resource.to_dict())
+                if 'values_changed' in diff:
+                    logging.debug("project %s differs: '%s'" % (project['name'], diff))
+                    if not self.dry_run:
                         keystone.projects.update(resource.id, **project)
-                        break
 
             # cache the project id
             #if domain.name not in project_cache:
@@ -184,7 +183,7 @@ class Projects():
 
             # seed swift account
             if swift:
-                sw = Swift(self.args)
+                sw = Swift(self.args, self.dry_run)
                 sw.seed(resource, swift)
 
             # seed designate quota
@@ -320,7 +319,7 @@ class Projects():
                         "%s differs. set project %s designate quota to '%s'" % (
                             attr, project.name, config))
                     new_quota[attr] = config[attr]
-            if len(new_quota):
+            if len(new_quota) and not self.dry_run:
                 designate.quotas.update(project.id, new_quota)
 
         except Exception as e:
@@ -372,7 +371,8 @@ class Projects():
                     # wtf
                     if 'type' in zone:
                         zone['type_'] = zone.pop('type')
-                    resource = designate.zones.create(zone.pop('name'),
+                    if not self.dry_run:
+                        resource = designate.zones.create(zone.pop('name'),
                                                     **zone)
 
                 if recordsets:

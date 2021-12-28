@@ -16,8 +16,8 @@
 import logging
 from deepdiff import DeepDiff
 from seeder_ccloud import utils
-
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
+
 
 class Users():
     def __init__(self, args, dry_run=False):

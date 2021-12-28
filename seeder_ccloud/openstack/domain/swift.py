@@ -22,9 +22,9 @@ from swiftclient import client as swiftclient
 from keystoneclient import exceptions
 
 class Swift():
-    def __init__(self, args):
+    def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
-
+        self.dry_run = dry_run
 
     def seed(self, project, swift):
         """
@@ -69,7 +69,8 @@ class Swift():
                     # nope, go create it
                     logging.info(
                         'creating swift account for project %s' % project.name)
-                    swiftclient.put_object(storage_url, token=service_token)
+                    if not self.dry_run:
+                        swiftclient.put_object(storage_url, token=service_token)
 
                 # seed swift containers
                 if 'containers' in swift:
@@ -83,7 +84,7 @@ class Swift():
                 raise
 
     
-    def seed_swift_containers(project, containers, conn):
+    def seed_swift_containers(self, project, containers, conn):
         """
         Creates swift containers for a project
         :param project:
@@ -112,14 +113,16 @@ class Swift():
                                 "%s differs. update container %s/%s" % (
                                     header, project.name,
                                     container['name']))
-                            conn.post_container(container['name'], headers)
+                            if not self.dry_run:
+                                conn.post_container(container['name'], headers)
                             break
                 except swiftclient.ClientException:
                     # nope, go create it
                     logging.info(
                         'creating swift container %s/%s' % (
                             project.name, container['name']))
-                    conn.put_container(container['name'], headers)
+                    if not self.dry_run:
+                        conn.put_container(container['name'], headers)
             except Exception as e:
                 logging.error(
                     "could not seed swift container for project %s: %s" % (

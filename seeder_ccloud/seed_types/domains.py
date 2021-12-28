@@ -132,7 +132,7 @@ class Domains(BaseRegisteredSeedTypeClass):
         if driver:
             self._seed_domain_config(resource, driver)
         if projects:
-            pr = Projects(self.args)
+            pr = Projects(self.args, self.dry_run)
             role_assignments = pr.seed(resource, projects)
             self.role_assignments.append(role_assignments)
         if users:
