@@ -76,7 +76,7 @@ class Domains(BaseRegisteredSeedTypeClass):
 
    
     def seed(self, domains):
-        assignment = Role_Assignments(self.args)
+        assignment = Role_Assignments(self.args, self.dry_run)
         self.role_assignments = []
         for domain in domains:
             self._seed_domain(domain)

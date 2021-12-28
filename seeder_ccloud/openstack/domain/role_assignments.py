@@ -21,8 +21,9 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 
 class Role_Assignments():
-    def __init__(self, args):
+    def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
+        self.dry_run = dry_run
    
     def seed(self, role_assignments):
         for role_assignment in role_assignments:
@@ -85,7 +86,8 @@ class Role_Assignments():
                 keystone.roles.check(role_id, **role_assignment)
             except exceptions.NotFound:
                 logging.info("grant '%s' to '%s'" % (role, assignment))
-                keystone.roles.grant(role_id, **role_assignment)
+                if not self.dry_run:
+                    keystone.roles.grant(role_id, **role_assignment)
         except ValueError as e:
             logging.error(
                 "skipped role assignment %s since it is invalid: %s" % (
