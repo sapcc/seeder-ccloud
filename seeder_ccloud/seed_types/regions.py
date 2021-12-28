@@ -18,8 +18,15 @@ from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
-
 from deepdiff import DeepDiff
+
+
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.regions')
+def validate(spec, dryrun, **_):
+    regions = spec.get('regions', [])
+    for region in regions:
+        if 'id' not in region or not region['id']:
+            raise kopf.AdmissionError("Region must have an id if present..")
 
 
 class Regions(BaseRegisteredSeedTypeClass):
@@ -59,10 +66,6 @@ class Regions(BaseRegisteredSeedTypeClass):
 
         region = self.openstack.sanitize(region,
                         ('id', 'description', 'parent_region'))
-        if 'id' not in region or not region['id']:
-            logging.warn(
-                "skipping region '%s', since it is misconfigured" % region)
-            return
 
         try:
             result = self.openstack.get_keystoneclient().regions.get(region['id'])

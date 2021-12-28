@@ -20,6 +20,17 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
+
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.volume_types')
+def validate(spec, dryrun, **_):
+    volume_types = spec.get('volume_types', [])
+    for volume_type in volume_types:
+        if 'extra_specs' in volume_type:
+            extra_specs = volume_type.get('extra_specs', None)
+            if not isinstance(extra_specs, dict):
+                raise kopf.AdmissionError("Volume_Type extra_specs is invalid..")
+
+
 class Volume_Types(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
@@ -70,10 +81,7 @@ class Volume_Types(BaseRegisteredSeedTypeClass):
             vtype = cinder.volume_types.create(volume_type['name'], volume_type['description'], volume_type['is_public'])
             if 'extra_specs' in volume_type:
                 extra_specs = volume_type.pop('extra_specs', None)
-                if not isinstance(extra_specs, dict):
-                    logging.warn("skipping volume-type '%s', since it has invalid extra_specs" % volume_type)
-                else:
-                    vtype.set_keys(extra_specs)
+                vtype.set_keys(extra_specs)
 
         vtype = get_type_by_name(volume_type['name'])
         if vtype:

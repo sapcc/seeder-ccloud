@@ -28,6 +28,14 @@ from deepdiff import DeepDiff
 from keystoneclient import exceptions
 
 
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
+def validate(spec, dryrun, **_):
+    domains = spec.get('domains', [])
+    for domain in domains:
+        if 'name' not in domain or not domain['name']:
+            raise kopf.AdmissionError("Flavors must have a name if present..")
+
+
 class Domains(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)

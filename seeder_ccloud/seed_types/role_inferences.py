@@ -21,6 +21,16 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
+def validate(spec, dryrun, **_):
+    role_inferences = spec.get('role_inferences', [])
+    for role_inference in role_inferences:
+        if 'prior_role' not in role_inference or not role_inference['prior_role']:
+            raise kopf.AdmissionError("role_inferences must have a prior_role if present..")
+        if 'implied_role' not in role_inference or not role_inference['implied_role']:
+            raise kopf.AdmissionError("role_inferences must have a implied_role if present.")
+
+
 class Role_Inferences(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)

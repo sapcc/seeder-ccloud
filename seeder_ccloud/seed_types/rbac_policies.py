@@ -18,8 +18,31 @@ from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
-
 from keystoneclient import exceptions
+
+object_name_regex = r"^([^@]+)@([^@]+)@([^@]+)$"
+target_name_regex = r"^([^@]+)@([^@]+)$"
+
+
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.rbac_policies')
+def validate(spec, dryrun, **_):
+    rbac_policies = spec.get('rbac_policies', [])
+    for rbac_policy in rbac_policies:
+        if 'object_type' not in rbac_policy or not rbac_policy['object_type']:
+            raise kopf.AdmissionError("Rbac-Policy must have a 'object_type' if present.")
+        if rbac_policy['object_type'] != 'network':
+            raise kopf.AdmissionError("Rbac-Policy 'object_type' must be set to 'network'.")
+        if 'object_name' not in rbac_policy or not rbac_policy['object_name']:
+            raise kopf.AdmissionError("Rbac-Policy must have a 'object_name' if present.")
+        if 'target_tenant_name' not in rbac_policy or not rbac_policy['target_tenant_name']:
+            raise kopf.AdmissionError("Rbac-Policy must have a 'target_tenant_name' if present.")
+
+        match = re.match(target_name_regex, rbac_policy['target_tenant_name'])
+        if match is None:
+            raise kopf.AdmissionError("Rbac-Policy 'target_tenant_name' invalid value.")
+        match = re.match(object_name_regex, rbac_policy['object_name'])
+        if match is None:
+            raise kopf.AdmissionError("Rbac-Policy 'object_name' invalid value.")
 
 
 class Rbac_Policies(BaseRegisteredSeedTypeClass):
@@ -50,23 +73,13 @@ class Rbac_Policies(BaseRegisteredSeedTypeClass):
     def _seed_rbac_policy(self, rbac):
         """ seed a neutron rbac-policy """
 
-        object_name_regex = r"^([^@]+)@([^@]+)@([^@]+)$"
-        target_name_regex = r"^([^@]+)@([^@]+)$"
-
         logging.debug("seeding rbac-policy %s" % rbac)
 
         # grab a neutron client
         neutron = self.openstack.get_neutronclient()
-
         rbac = self.openstack.sanitize(rbac, ('object_type', 'object_name', 'object_id', 'action', 'target_tenant_name', 'target_tenant'))
 
         try:
-            if 'object_type' not in rbac or not rbac['object_type'] or rbac['object_type'] != 'network':
-                logging.warn("skipping rbac-policy '%s', since object_type is missing" % rbac)
-                return
-            if 'object_name' not in rbac or not rbac['object_name']:
-                logging.warn("skipping rbac-policy '%s', since object_name is missing" % rbac)
-                return
             # network@project@domain ?
             network_id = None
             match = re.match(object_name_regex, rbac['object_name'])
@@ -80,9 +93,6 @@ class Rbac_Policies(BaseRegisteredSeedTypeClass):
             rbac['object_id'] = network_id
             rbac.pop('object_name', None)
 
-            if 'target_tenant_name' not in rbac or not rbac['target_tenant_name']:
-                logging.warn("skipping rbac-policy '%s', since target_tenant_name is missing" % rbac)
-                return
             # project@domain ?
             project_id = None
             match = re.match(target_name_regex, rbac['target_tenant_name'])

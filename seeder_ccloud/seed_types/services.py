@@ -22,6 +22,17 @@ from seeder_ccloud import utils
 from urllib.parse import urlparse
 from deepdiff import DeepDiff
 
+
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
+def validate(spec, dryrun, **_):
+    services = spec.get('services', [])
+    for service in services:
+        if 'name' not in service or not service['name']:
+            raise kopf.AdmissionError("Service must have a name if present..")
+        if 'type' not in service or not service['type']:
+            raise kopf.AdmissionError("Service must have a type if present..")
+
+
 class Services(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
@@ -57,11 +68,6 @@ class Services(BaseRegisteredSeedTypeClass):
 
         service = self.openstack.sanitize(service,
                         ('type', 'name', 'enabled', 'description'))
-        if 'name' not in service or not service['name'] \
-                or 'type' not in service or not service['type']:
-            logging.warn(
-                "skipping service '%s', since it is misconfigured" % service)
-            return
 
         result = self.openstack.get_keystoneclient().services.list(name=service['name'],
                                         type=service['type'])

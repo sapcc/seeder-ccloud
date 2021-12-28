@@ -40,17 +40,22 @@ operator_storage = kopf.AnnotationsDiffBaseStorage(
     key='last-handled-configuration',
 )
 
+
 @kopf.on.startup()
 def startup(settings: kopf.OperatorSettings, **kwargs):
     args = get_args()
     # Load kubernetes_asyncio config as kopf does not do that automatically for us.
     try:
         config.load_kube_config()
+        settings.admission.server = kopf.WebhookNgrokTunnel(port=88)
+        settings.admission.server.insecure = True
     except config.ConfigException:
+        settings.admission.server = kopf.WebhookServer()
         config.load_incluster_config()
 
     logging.info('starting operator with {} workers'.format(int(args.max_workers)))
     settings.execution.max_workers = int(args.max_workers)
+    settings.admission.managed = 'seeder.ccloud'
     settings.persistence.diffbase_storage = operator_storage
     settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=PREFIX)
 

@@ -22,6 +22,14 @@ from seeder_ccloud import utils
 from deepdiff import DeepDiff
 
 
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.roles')
+def validate(spec, dryrun, **_):
+    roles = spec.get('roles', [])
+    for role in roles:
+        if 'name' not in role or not role['name']:
+            raise kopf.AdmissionError("Roles must have a name if present..")
+
+
 class Roles(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)

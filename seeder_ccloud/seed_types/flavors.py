@@ -23,6 +23,31 @@ from deepdiff import DeepDiff
 from novaclient import exceptions as novaexceptions
 
 
+"""
+@kopf.on.mutate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
+def mutate(patch: kopf.Patch, spec, **_):
+    flavors = spec.get('flavors', [])
+    flavors_patched = []
+    for flavor in flavors:
+        flavor = utils.sanitize_dict(flavor, (
+                    'id', 'name', 'ram', 'disk', 'vcpus', 'swap', 'rxtx_factor',
+                    'is_public', 'disabled', 'ephemeral', 'extra_specs'))
+        flavors_patched.append(flavor)
+    if len(flavors_patched) != 0:
+        patch.spec['flavors'] = flavors_patched
+"""
+
+
+@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
+def validate(spec, dryrun, **_):
+    flavors = spec.get('flavors', [])
+    for flavor in flavors:
+        if 'name' not in flavor or not flavor['name']:
+            raise kopf.AdmissionError("Flavors must have a name if present..")
+        if 'id' not in flavor or not flavor['id']:
+            raise kopf.AdmissionError("Flavors must have an id if present.")
+
+
 class Flavors(BaseRegisteredSeedTypeClass):
     def __init__(self, args, seeder, dry_run=False):
         super().__init__(args, seeder, dry_run)
@@ -49,13 +74,6 @@ class Flavors(BaseRegisteredSeedTypeClass):
             flavor = self.openstack.sanitize(flavor, (
                 'id', 'name', 'ram', 'disk', 'vcpus', 'swap', 'rxtx_factor',
                 'is_public', 'disabled', 'ephemeral', 'extra_specs'))
-            if 'name' not in flavor or not flavor['name']:
-                logging.warn("skipping flavor '{}', since it has no name".format(flavor))
-                continue
-            if 'id' not in flavor or not flavor['id']:
-                logging.warn("skipping flavor '{}', since its id is missing".format(flavor))
-                continue
-
             required_traits, mentioned_traits, required_resource_classes = self._get_traits_and_resource_classes(flavor)
             missing_traits = list(mentioned_traits - set(self.openstack.get_traits()))
             associated_traits = set(self.openstack.get_traits(only_associated=True))
