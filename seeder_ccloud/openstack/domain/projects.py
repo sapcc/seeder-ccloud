@@ -28,7 +28,7 @@ from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 class Projects():
     def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
-        self.networks = Project_Networks(args)
+        self.networks = Project_Networks(args, self.dry_run)
         self.dry_run = dry_run
 
 

@@ -20,8 +20,9 @@ import re
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 class Project_Networks:
-    def __init__(self, args):
+    def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
+        self.dry_run = dry_run
 
 
     def seed_project_networks(self, project, networks):
@@ -29,8 +30,6 @@ class Project_Networks:
         seed a projects neutron networks and dependent objects
         :param project:
         :param networks:
-        :param args:
-        :param sess:
         :return:
         """
 
@@ -71,7 +70,8 @@ class Project_Networks:
                         "create network '%s/%s'" % (
                             project.name, network['name']))
                     result = neutron.create_network(body)
-                    resource = result['network']
+                    if not self.dry_run:
+                        resource = result['network']
                 else:
                     resource = result['networks'][0]
                     for attr in list(network.keys()):
@@ -81,7 +81,8 @@ class Project_Networks:
                                     attr, project.name, network['name']))
                             # drop read-only attributes
                             body['network'].pop('tenant_id', None)
-                            neutron.update_network(resource['id'], body)
+                            if not self.dry_run:
+                                neutron.update_network(resource['id'], body)
                             break
 
                 if tags:
@@ -113,7 +114,8 @@ class Project_Networks:
                 logging.info(
                     "adding tag %s to network '%s'" % (
                         tag, network['name']))
-                neutron.add_tag('networks', network['id'], tag)
+                if not self.dry_run:
+                    neutron.add_tag('networks', network['id'], tag)
 
 
     def seed_project_subnet_pools(self, project, subnet_pools, **kvargs):
@@ -150,20 +152,10 @@ class Project_Networks:
                     logging.info(
                         "create subnet-pool '%s/%s'" % (
                             project.name, subnet_pool['name']))
-                    result = neutron.create_subnetpool(body)
-                    # cache the subnetpool-id
-                    #if project.id not in subnetpool_cache:
-                    #    subnetpool_cache[project.id] = {}
-                    # subnetpool_cache[project.id][subnet_pool['name']] = \
-                    #    result['subnetpool']['id']
+                    if not self.dry_run:
+                        result = neutron.create_subnetpool(body)
                 else:
                     resource = result['subnetpools'][0]
-                    # cache the subnetpool-id
-                    #if project.id not in subnetpool_cache:
-                    #    subnetpool_cache[project.id] = {}
-                    #subnetpool_cache[project.id][subnet_pool['name']] = \
-                    #    resource['id']
-
                     for attr in list(subnet_pool.keys()):
                         if attr == 'prefixes':
                             for prefix in subnet_pool['prefixes']:
@@ -177,8 +169,8 @@ class Project_Networks:
                                     body['subnetpool'].pop('tenant_id',
                                                         None)
                                     body['subnetpool'].pop('shared', None)
-                                    neutron.update_subnetpool(
-                                        resource['id'], body)
+                                    if not self.dry_run:
+                                        neutron.update_subnetpool(resource['id'], body)
                                     break
                         else:
                             # a hacky comparison due to the neutron api not dealing with string/int attributes consistently
@@ -191,8 +183,9 @@ class Project_Networks:
                                 # drop read-only attributes
                                 body['subnetpool'].pop('tenant_id', None)
                                 body['subnetpool'].pop('shared', None)
-                                neutron.update_subnetpool(resource['id'],
-                                                        body)
+                                if not self.dry_run:
+                                    neutron.update_subnetpool(resource['id'],
+                                                            body)
                                 break
             except Exception as e:
                 logging.error("could not seed subnet pool %s/%s: %s" % (
@@ -253,7 +246,8 @@ class Project_Networks:
                 logging.info(
                     "create subnet '%s/%s'" % (
                         network['name'], subnet['name']))
-                neutron.create_subnet(body)
+                if not self.dry_run:
+                    neutron.create_subnet(body)
             else:
                 resource = result['subnets'][0]
                 for attr in list(subnet.keys()):
@@ -269,7 +263,8 @@ class Project_Networks:
                         body['subnet'].pop('subnetpool_id', None)
                         body['subnet'].pop('ip_version', None)
                         body['subnet'].pop('prefixlen', None)
-                        neutron.update_subnet(resource['id'], body)
+                        if not self.dry_run:
+                            neutron.update_subnet(resource['id'], body)
                         break
 
     def seed_project_network_quota(self, project, quota):
@@ -295,7 +290,8 @@ class Project_Networks:
             logging.info(
                 "set project %s network quota to '%s'" % (
                     project.name, quota))
-            neutron.update_quota(project.id, body)
+            if not self.dry_run:
+                neutron.update_quota(project.id, body)
         else:
             resource = result['quota']
             new_quota = {}
@@ -305,7 +301,7 @@ class Project_Networks:
                         "%s differs. set project %s network quota to '%s'" % (
                             attr, project.name, quota[attr]))
                     new_quota[attr] = quota[attr]
-            if len(new_quota):
+            if len(new_quota) and not self.dry_run:
                 neutron.update_quota(project.id, {'quota': new_quota})
 
     
@@ -345,8 +341,9 @@ class Project_Networks:
                     logging.info(
                         "create address-scope '%s/%s'" % (
                             project.name, scope['name']))
-                    result = neutron.create_address_scope(body)
-                    resource = result['address_scope']
+                    if not self.dry_run:
+                        result = neutron.create_address_scope(body)
+                        resource = result['address_scope']
                 else:
                     resource = result['address_scopes'][0]
                     for attr in list(scope.keys()):
@@ -357,8 +354,9 @@ class Project_Networks:
                             # drop read-only attributes
                             body['address_scope'].pop('tenant_id', None)
                             body['address_scope'].pop('ip_version', None)
-                            neutron.update_address_scope(resource['id'],
-                                                        body)
+                            if not self.dry_run:
+                                neutron.update_address_scope(resource['id'],
+                                                            body)
                             break
 
                 if subnet_pools:
@@ -490,8 +488,9 @@ class Project_Networks:
                     logging.info(
                         "create router '%s/%s': %s" % (
                             project.name, router['name'], body))
-                    result = neutron.create_router(body)
-                    resource = result['router']
+                    if not self.dry_run:
+                        result = neutron.create_router(body)
+                        resource = result['router']
                 else:
                     resource = result['routers'][0]
                     update = False
@@ -519,8 +518,9 @@ class Project_Networks:
                             project.name, router['name'], body))
                         # drop read-only attributes
                         body['router'].pop('tenant_id', None)
-                        result = neutron.update_router(resource['id'], body)
-                        resource = result['router']
+                        if not self.dry_run:
+                            result = neutron.update_router(resource['id'], body)
+                            resource = result['router']
 
                 if interfaces:
                     self.seed_router_interfaces(resource, interfaces)
@@ -590,6 +590,7 @@ class Project_Networks:
                 continue
 
             # add router interface
-            neutron.add_interface_router(router['id'], interface)
+            if not self.dry_run:
+                neutron.add_interface_router(router['id'], interface)
             logging.info("added interface %s to router'%s'" % (
                 interface, router['name']))
