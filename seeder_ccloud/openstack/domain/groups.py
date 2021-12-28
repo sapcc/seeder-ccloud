@@ -14,15 +14,15 @@
  limitations under the License.
 """
 import logging
-
+from deepdiff import DeepDiff
 from keystoneclient import exceptions
-
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 
 class Groups():
-    def __init__(self, args):
+    def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
+        self.dry_run = dry_run
 
 
     def seed(self, domain, groups):
@@ -53,16 +53,16 @@ class Groups():
         if not result:
             logging.info(
                 "create group '%s/%s'" % (domain.name, group['name']))
-            resource = keystone.groups.create(domain=domain, **group)
+            if not self.dry_run:
+                resource = keystone.groups.create(domain=domain, **group)
         else:
             resource = result[0]
-            for attr in list(group.keys()):
-                if group[attr] != resource._info.get(attr, ''):
-                    logging.info(
-                        "%s differs. update group '%s/%s'" % (
-                            attr, domain.name, group['name']))
+            diff = DeepDiff(group, resource.to_dict())
+            if 'values_changed' in diff:
+                logging.debug("group %s differs: '%s'" % (group['name'], diff))
+                if not self.dry_run:
                     keystone.groups.update(resource.id, **group)
-                    break
+
         # cache the group id
         #if domain.name not in group_cache:
         #    group_cache[domain.name] = {}

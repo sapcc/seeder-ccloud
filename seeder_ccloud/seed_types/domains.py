@@ -136,11 +136,11 @@ class Domains(BaseRegisteredSeedTypeClass):
             role_assignments = pr.seed(resource, projects)
             self.role_assignments.append(role_assignments)
         if users:
-            usr = Users(self.args)
+            usr = Users(self.args, self.dry_run)
             role_assignments = usr.seed(resource, users)
             self.role_assignments.append(role_assignments)
         if groups:
-            gr = Groups(self.args)
+            gr = Groups(self.args, self.dry_run)
             role_assignments = gr.seed(resource, groups)
             self.role_assignments.append(role_assignments)
         if roles:

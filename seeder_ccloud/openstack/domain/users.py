@@ -14,12 +14,15 @@
  limitations under the License.
 """
 import logging
+from deepdiff import DeepDiff
+from seeder_ccloud import utils
 
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 class Users():
-    def __init__(self, args):
+    def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
+        self.dry_run = dry_run
 
     def seed(self, domain, users):
         self.role_assignments = []
@@ -48,18 +51,16 @@ class Users():
             if not result:
                 logging.info(
                     "create user '%s/%s'" % (domain.name, user['name']))
-                resource = keystone.users.create(domain=domain, **user)
+                if not self.dry_run:
+                    resource = keystone.users.create(domain=domain, **user)
             else:
                 resource = result[0]
-                for attr in list(user.keys()):
-                    if attr == 'password':
-                        continue
-                    if user[attr] != resource._info.get(attr, ''):
-                        logging.info(
-                            "%s differs. update user '%s/%s' (%s)" % (
-                                attr, domain.name, user['name'], attr))
+                diff = DeepDiff(user, resource.to_dict(), exclude_obj_callback=utils.diff_exclude_password_callback)
+                if 'values_changed' in diff:
+                    logging.debug("user %s differs: '%s'" % (user['name'], diff))
+                    if not self.dry_run:
                         keystone.users.update(resource.id, **user)
-                        break
+
         # add the users role assignments to the list to be resolved later on
         if ra:
             for role in ra:
