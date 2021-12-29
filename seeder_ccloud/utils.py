@@ -67,3 +67,13 @@ def get_changed_seeds(old, new):
         changed = [i for i in new_copy if i not in old_copy]
     
     return changed
+
+
+def get_changed_sub_seeds(old, new, key):
+    """
+    compares the values from the key and returns a list of
+    changed values
+    """
+    new = new.pop(key, [])
+    old = old.pop(key, [])
+    return [i for i in new if i not in old]

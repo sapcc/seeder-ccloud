@@ -106,12 +106,12 @@ class Domains(BaseRegisteredSeedTypeClass):
         new_domain = domain_tuple[1]
 
         #get all changed sub_seeds
-        users = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'users')
-        groups = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'groups')
-        projects = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'projects')
-        driver = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'config')
-        roles = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'roles')
-        ra = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'role_assignments')
+        users = utils.get_changed_sub_seeds(old_domain, new_domain, 'users')
+        groups = utils.get_changed_sub_seeds(old_domain, new_domain, 'groups')
+        projects = utils.get_changed_sub_seeds(old_domain, new_domain, 'projects')
+        driver = utils.get_changed_sub_seeds(old_domain, new_domain, 'config')
+        roles = utils.get_changed_sub_seeds(old_domain, new_domain, 'roles')
+        ra = utils.get_changed_sub_seeds(old_domain, new_domain, 'role_assignments')
 
         # grab a keystone client
         keystone = self.openstack.get_keystoneclient()

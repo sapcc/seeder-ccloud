@@ -95,7 +95,7 @@ class Services(BaseRegisteredSeedTypeClass):
         old_service = service_tuple[0]
         new_service = service_tuple[1]
         logging.debug("seeding service %s" % new_service)
-        endpoints = self.openstack.get_changed_sub_seeds(old_service, new_service, 'endpoints')
+        endpoints = utils.get_changed_sub_seeds(old_service, new_service, 'endpoints')
 
         service = self.openstack.sanitize(new_service,
                         ('type', 'name', 'enabled', 'description'))
