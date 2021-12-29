@@ -55,11 +55,14 @@ class Users():
                     resource = keystone.users.create(domain=domain, **user)
             else:
                 resource = result[0]
+                # no need to diff, since we only work on the users that
+                # changed in kubernetes. Will leave it for logging reasons
                 diff = DeepDiff(user, resource.to_dict(), exclude_obj_callback=utils.diff_exclude_password_callback)
                 if 'values_changed' in diff:
                     logging.debug("user %s differs: '%s'" % (user['name'], diff))
-                    if not self.dry_run:
-                        keystone.users.update(resource.id, **user)
+
+                if not self.dry_run:
+                    keystone.users.update(resource.id, **user)
 
         # add the users role assignments to the list to be resolved later on
         if ra:

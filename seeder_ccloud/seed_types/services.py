@@ -14,6 +14,7 @@
  limitations under the License.
 """
 
+import copy
 import logging, kopf
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
@@ -60,13 +61,25 @@ class Services(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
-    def seed_services_handler(memo: kopf.Memo, new, name, annotations, **_):
+    def seed_services_handler(memo: kopf.Memo, new, old, name, annotations, **_):
         logging.info('seeding {} services'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-
+        
+        new_copy = copy.deepcopy(new)
+        old_copy = copy.deepcopy(old)
         try:
-            memo['seeder'].all_seedtypes['services'].seed(new)
+            changed = []
+            if old is None:
+                changed = new_copy
+            else:
+                for index, domain in enumerate(new_copy):
+                    try:
+                        if domain != old_copy[index]:
+                            changed.append((old_copy[index], domain))
+                    except IndexError:
+                        changed.append((None,domain))
+                memo['seeder'].all_seedtypes['services'].seed(changed)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
@@ -77,16 +90,15 @@ class Services(BaseRegisteredSeedTypeClass):
             self._seed_service(service)
 
 
-    def _seed_service(self, service):
+    def _seed_service(self, service_tuple):
         """ seed a keystone service """
-        logging.debug("seeding service %s" % service)
-        endpoints = None
-        if 'endpoints' in service:
-            endpoints = service.pop('endpoints', None)
+        old_service = service_tuple[0]
+        new_service = service_tuple[1]
+        logging.debug("seeding service %s" % new_service)
+        endpoints = self.openstack.get_changed_sub_seeds(old_service, new_service, 'endpoints')
 
-        service = self.openstack.sanitize(service,
+        service = self.openstack.sanitize(new_service,
                         ('type', 'name', 'enabled', 'description'))
-
         result = self.openstack.get_keystoneclient().services.list(name=service['name'],
                                         type=service['type'])
         if not result:

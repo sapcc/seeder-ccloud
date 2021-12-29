@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import logging, kopf
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from keystoneclient import exceptions
@@ -40,13 +41,14 @@ class Role_Inferences(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
-    def seed_role_inferences_handler(memo: kopf.Memo, new, name, annotations, **_):
+    def seed_role_inferences_handler(memo: kopf.Memo, new, old, name, annotations, **_):
         logging.info('seeding {} role_inferences'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
         try:
-            memo['seeder'].all_seedtypes['role_inferences'].seed(new)
+            changed = utils.get_changed_seeds(old, new)
+            memo['seeder'].all_seedtypes['role_inferences'].seed(changed)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 

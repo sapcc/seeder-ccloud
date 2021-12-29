@@ -14,8 +14,10 @@
  limitations under the License.
 """
 
+import copy
 import difflib
 import pprint
+import kopf
 import json
 from seeder_operator import PREFIX
 
@@ -31,6 +33,17 @@ def diff_exclude_password_callback(obj, path):
     return True if "password" in path else False
 
 
+def sanitize_dict(source, keys):
+    result = {}
+    for attr in keys:
+        if attr in source:
+            if isinstance(source[attr], str):
+                result[attr] = source[attr].strip()
+            else:
+                result[attr] = source[attr]
+    return result
+
+
 def is_dependency_successful(annotations):
     dep = annotations.get(PREFIX + '/check_dependencies', None)
 
@@ -42,3 +55,15 @@ def is_dependency_successful(annotations):
         return False
 
     return True
+
+
+def get_changed_seeds(old, new):
+    new_copy = copy.deepcopy(new)
+    old_copy = copy.deepcopy(old)
+    changed = []
+    if old is None:
+        changed = new_copy
+    else:
+        changed = [i for i in new_copy if i not in old_copy]
+    
+    return changed

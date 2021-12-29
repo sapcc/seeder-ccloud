@@ -13,6 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
+from functools import cmp_to_key
 import logging, kopf
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
@@ -62,18 +64,32 @@ class Domains(BaseRegisteredSeedTypeClass):
         super().__init__(args, seeder, dry_run)
         self.openstack = OpenstackHelper(args)
 
+
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-    def seed_domains_handler(memo: kopf.Memo, new, name, annotations, **_):
-        logging.info('seeding {} domains'.format(name))
+    def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+        logging.info('seeding {} == > domains'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+        domains = []
+        # we cannot alter the lists from the operator
+        new_copy = copy.deepcopy(new)
+        old_copy = copy.deepcopy(old)
+        if old is None:
+            domains = new_copy
+        else:
+            for index, domain in enumerate(new_copy):
+                try:
+                    if domain != old_copy[index]:
+                        domains.append((old_copy[index], domain))
+                except IndexError:
+                    domains.append((None,domain))
         try:
-            memo['seeder'].all_seedtypes['domains'].seed(new)
+            memo['seeder'].all_seedtypes['domains'].seed(domains)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
-
+        logging.info('DONE seeding {} == > domains'.format(name))
    
     def seed(self, domains):
         assignment = Role_Assignments(self.args, self.dry_run)
@@ -84,32 +100,22 @@ class Domains(BaseRegisteredSeedTypeClass):
         assignment.seed(self.role_assignments)
 
 
-    def _seed_domain(self, domain):
-        logging.debug("seeding domain %s" % domain)
+    def _seed_domain(self, domain_tuple):
+        logging.debug('seeding domain {}'.format(domain_tuple[1]['name']))
+        old_domain = domain_tuple[0]
+        new_domain = domain_tuple[1]
+
+        #get all changed sub_seeds
+        users = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'users')
+        groups = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'groups')
+        projects = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'projects')
+        driver = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'config')
+        roles = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'roles')
+        ra = self.openstack.get_changed_sub_seeds(old_domain, new_domain, 'role_assignments')
 
         # grab a keystone client
         keystone = self.openstack.get_keystoneclient()
-
-        users = None
-        if 'users' in domain:
-            users = domain.pop('users', None)
-        groups = None
-        if 'groups' in domain:
-            groups = domain.pop('groups', None)
-        projects = None
-        if 'projects' in domain:
-            projects = domain.pop('projects', None)
-        driver = None
-        if 'config' in domain:
-            driver = domain.pop('config', None)
-        roles = None
-        if 'roles' in domain:
-            roles = domain.pop('roles', None)
-        ra = None
-        if 'role_assignments' in domain:
-            ra = domain.pop('role_assignments', None)
-
-        domain = self.openstack.sanitize(domain, ('name', 'description', 'enabled'))
+        domain = self.openstack.sanitize(new_domain, ('name', 'description', 'enabled'))
 
         result = keystone.domains.list(name=domain['name'])
         if not result:
@@ -121,13 +127,8 @@ class Domains(BaseRegisteredSeedTypeClass):
             diff = DeepDiff(domain, resource.to_dict())
             if 'values_changed' in diff:
                 if not self.dry_run:
-                #if not self._domain_config_equal(driver, result.to_dict()):
                     logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
                     keystone.domains.update(resource.id, **domain)
-
-        # cache the domain id
-        #if resource.name not in domain_cache:
-        #   domain_cache[resource.name] = resource.id
 
         if driver:
             self._seed_domain_config(resource, driver)
@@ -169,6 +170,16 @@ class Domains(BaseRegisteredSeedTypeClass):
                 self.role_assignments.append(assignment)
 
 
+    def _get_sub_seeds(self, old_domain, new_domain, key):
+        """
+        compares the values from the key and returns a list of
+        changed values
+        """
+        new = new_domain.pop(key, [])
+        old = old_domain.pop(key, [])
+        return [i for i in new if i not in old]
+
+
     def _seed_domain_config(self, domain, driver):
         logging.debug(
             "seeding domain config %s %s" % (domain.name, self.openstack.redact(driver)))
@@ -179,10 +190,9 @@ class Domains(BaseRegisteredSeedTypeClass):
             result = keystone.domain_configs.get(domain)
             diff = DeepDiff(driver, result.to_dict(), exclude_obj_callback=utils.diff_exclude_password_callback)
             if 'values_changed' in diff:
-                if not self.dry_run:
-                #if not self._domain_config_equal(driver, result.to_dict()):
-                    logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
-                    keystone.domain_configs.update(domain, driver)
+                logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
+            if not self.dry_run:
+                keystone.domain_configs.update(domain, driver)
         except exceptions.NotFound:
              if not self.dry_run:
                 logging.debug('creating domain config %s' % domain.name)

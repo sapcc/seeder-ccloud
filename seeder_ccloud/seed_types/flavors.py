@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import kopf, logging
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -61,12 +62,13 @@ class Flavors(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
-    def seed_flavors_handler(memo: kopf.Memo, new, spec, name, annotations, **_):
+    def seed_flavors_handler(memo: kopf.Memo, new, old, spec, name, annotations, **_):
         logging.info('seeding {} flavor'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
         try:
-            memo['seeder'].all_seedtypes['flavors'].seed(new, spec)
+            changed = utils.get_changed_seeds(old, new)
+            memo['seeder'].all_seedtypes['flavors'].seed(changed, spec)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
@@ -138,9 +140,9 @@ class Flavors(BaseRegisteredSeedTypeClass):
                     logging.info(
                         "deleting flavor '%s' to re-create, since it differs '%s'" %
                         (flavor['name'], diff['values_changed']))
-                    if not self.dry_run:
-                        resource.delete()
-                        create = True
+                if not self.dry_run:
+                    resource.delete()
+                    create = True
 
             except novaexceptions.NotFound:
                 create = True

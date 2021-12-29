@@ -163,23 +163,23 @@ class Projects():
                 limes = keystone.services.list(name='limes')
                 # only seed network quota if limes is not available
                 if not len(limes):
-                    self.network.seed_project_network_quota(resource, network_quota)
+                    self.networks.seed_project_network_quota(resource, network_quota)
 
             # seed the projects network address scopes
             if address_scopes:
-                 self.network.seed_project_address_scopes(resource, address_scopes)
+                 self.networks.seed_project_address_scopes(resource, address_scopes)
 
             # seed the projects network subnet-pools
             if subnet_pools:
-                self.network.seed_project_subnet_pools(resource, subnet_pools)
+                self.networks.seed_project_subnet_pools(resource, subnet_pools)
 
             # seed the projects networks
             if networks:
-                self.network.seed_project_networks(resource, networks)
+                self.networks.seed_project_networks(resource, networks)
 
             # seed the projects routers
             if routers:
-                self.network.seed_project_routers(resource, routers)
+                self.networks.seed_project_routers(resource, routers)
 
             # seed swift account
             if swift:

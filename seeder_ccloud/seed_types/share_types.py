@@ -30,13 +30,14 @@ class Share_Types(BaseRegisteredSeedTypeClass):
     @staticmethod
     @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.share_types')
     @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.share_types')
-    def seed_share_types_handler(memo: kopf.Memo, new, name, annotations, **_):
+    def seed_share_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
         logging.info('seeding {} share_types'.format(name))
         if not utils.is_dependency_successful(annotations):
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
         try:
-            memo['seeder'].all_seedtypes['share_types'].seed(new)
+            changed = utils.get_changed_seeds(old, new)
+            memo['seeder'].all_seedtypes['share_types'].seed(changed)
         except Exception as error:
             raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
