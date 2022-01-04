@@ -33,7 +33,7 @@ def validate(spec, dryrun, **_):
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.projects')
 @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.projects')
-def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_projects_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} flavor'.format(name))
     if not utils.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -51,21 +51,20 @@ class Projects():
         self.dry_run = dry_run
 
 
-    def seed(self, projects, domain):
+    def seed(self, projects):
         for project in projects:
-            self._seed_projects(domain, project)
+            self._seed_projects(project)
 
 
-    def _seed_projects(self, domain, project):
+    def _seed_projects(self, project):
             """
             seed keystone projects and their dependant objects
             """
-
-            logging.debug("seeding project %s %s" % (domain.name, project))
+            domain_name = project['domain']
+            domain_id = self.openstack.get_domain_id(domain_name)
+            logging.debug("seeding project %s %s" % (domain_name, project))
 
             keystone = self.openstack.get_keystoneclient()
-            
-            subnet_pools = project.get('subnet_pools', [])
             
             dns_quota = project.pop('dns_quota', None)
             
@@ -80,26 +79,26 @@ class Projects():
 
             # resolve parent project if specified
             if 'parent' in project:
-                parent_id = self.openstack.get_project_id(domain.name, project['parent'],
+                parent_id = self.openstack.get_project_id(domain_name, project['parent'],
                                         keystone)
                 if not parent_id:
                     logging.warn(
                         "skipping project '%s/%s', since its parent project is missing" % (
-                            domain.name, project))
+                            domain_name, project))
                     return
                 else:
                     project['parent_id'] = parent_id
 
             project.pop('parent', None)
 
-            result = keystone.projects.list(domain=domain.id,
+            result = keystone.projects.list(domain=domain_id,
                                             name=project['name'])
             if not result:
                 logging.info(
                     "create project '%s/%s'" % (
-                        domain.name, project['name']))
+                        domain_name, project['name']))
                 if not self.dry_run:
-                    resource = keystone.projects.create(domain=domain,
+                    resource = keystone.projects.create(domain=domain_id,
                                                     **project)
             else:
                 resource = result[0]
@@ -108,10 +107,6 @@ class Projects():
                     logging.debug("project %s differs: '%s'" % (project['name'], diff))
                     if not self.dry_run:
                         keystone.projects.update(resource.id, **project)
-
-            # seed the projects network subnet-pools
-            if subnet_pools:
-                self.networks.seed_project_subnet_pools(resource, subnet_pools)
 
             # seed designate quota
             if dns_quota:
@@ -125,7 +120,7 @@ class Projects():
                 self.seed_project_tsig_keys(resource, dns_tsig_keys)
 
             if ec2_creds:
-                self.seed_project_ec2_creds(resource, domain, ec2_creds)
+                self.seed_project_ec2_creds(resource, domain_id, ec2_creds)
 
             # seed flavors
             if flavors:
@@ -235,7 +230,7 @@ class Projects():
                 project.name, e))
 
 
-    def seed_project_ec2_creds(self, project, domain, creds):
+    def seed_project_ec2_creds(self, project, domain_name, creds):
         """
         Seed a projects ec2 credentials
         :param user:
@@ -255,7 +250,7 @@ class Projects():
 
         for cred in creds:
             cred = self.openstack.sanitize(cred, ('user', 'user_domain', 'access', 'key'))
-            project_id = self.openstack.get_project_id(domain.name, project.name)
+            project_id = self.openstack.get_project_id(domain_name, project.name)
             user_id = self.openstack.get_user_id(cred['user_domain'], cred['user'])
 
             if cred.get('access') is None or cred.get('key') is None:

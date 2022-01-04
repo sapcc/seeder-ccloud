@@ -14,10 +14,10 @@
  limitations under the License.
 """
 import logging, kopf
-from designateclient.v2 import client as designateclient
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
+from subnet_pools import Subnet_Pools
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.address_scopes')
@@ -35,7 +35,7 @@ def validate(spec, dryrun, **_):
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.address_scopes')
 @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.address_scopes')
-def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} address_scopes'.format(name))
     if not utils.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -50,6 +50,7 @@ def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_)
 class Address_Scopes():
     def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
+        self.args = args
         self.dry_run = dry_run
 
 
@@ -58,7 +59,7 @@ class Address_Scopes():
             self._seed_address_scope(address_scope)
 
 
-    def _seed_address_scopes(self, scope):
+    def _seed_address_scope(self, scope):
         """
         seed a projects neutron address scopes and dependent objects
         :param project: 
@@ -108,78 +109,12 @@ class Address_Scopes():
                         break
 
             if subnet_pools:
-                kvargs = {'address_scope_id': resource['id']}
-                self._seed_project_subnet_pools(project_id, project_name, subnet_pools, **kvargs)
+                pools = Subnet_Pools(self.args, self.dry_run)
+                for subnet_pool in subnet_pools:
+                    subnet_pool['project'] = project_name
+                    subnet_pool['address_scope_id'] = resource['id']
+                pools.seed(subnet_pools)
         except Exception as e:
             logging.error("could not seed address scope %s/%s: %s" % (
                 project_name, scope['name'], e))
             raise
-
-
-    def _seed_project_subnet_pools(self, project_id, project_name, subnet_pools, **kvargs):
-        logging.debug(
-            "seeding subnet-pools of project %s" % project_name)
-
-        neutron = self.openstack.get_neutronclient()
-
-        for subnet_pool in subnet_pools:
-            try:
-                subnet_pool = self.openstack.sanitize(subnet_pool, (
-                    'name', 'default_quota', 'prefixes', 'min_prefixlen',
-                    'shared',
-                    'default_prefixlen', 'max_prefixlen', 'description',
-                    'address_scope_id', 'is_default'))
-
-                if kvargs:
-                    subnet_pool = dict(list(subnet_pool.items()) + list(kvargs.items()))
-
-                body = {'subnetpool': subnet_pool.copy()}
-                body['subnetpool']['tenant_id'] = project_id
-
-                query = {'tenant_id': project_id,
-                        'name': subnet_pool['name']}
-                result = neutron.list_subnetpools(retrieve_all=True,
-                                                **query)
-                if not result or not result['subnetpools']:
-                    logging.info(
-                        "create subnet-pool '%s/%s'" % (
-                            project_name, subnet_pool['name']))
-                    if not self.dry_run:
-                        result = neutron.create_subnetpool(body)
-                else:
-                    resource = result['subnetpools'][0]
-                    for attr in list(subnet_pool.keys()):
-                        if attr == 'prefixes':
-                            for prefix in subnet_pool['prefixes']:
-                                if prefix not in resource.get('prefixes',
-                                                            []):
-                                    logging.info(
-                                        "update subnet-pool prefixes '%s/%s'" % (
-                                            project_name,
-                                            subnet_pool['name']))
-                                    # drop read-only attributes
-                                    body['subnetpool'].pop('tenant_id',
-                                                        None)
-                                    body['subnetpool'].pop('shared', None)
-                                    if not self.dry_run:
-                                        neutron.update_subnetpool(resource['id'], body)
-                                    break
-                        else:
-                            # a hacky comparison due to the neutron api not dealing with string/int attributes consistently
-                            if str(subnet_pool[attr]) != str(
-                                    resource.get(attr, '')):
-                                logging.info(
-                                    "%s differs. update subnet-pool'%s/%s'" % (
-                                        attr, project_name,
-                                        subnet_pool['name']))
-                                # drop read-only attributes
-                                body['subnetpool'].pop('tenant_id', None)
-                                body['subnetpool'].pop('shared', None)
-                                if not self.dry_run:
-                                    neutron.update_subnetpool(resource['id'],
-                                                            body)
-                                break
-            except Exception as e:
-                logging.error("could not seed subnet pool %s/%s: %s" % (
-                    project_name, subnet_pool['name'], e))
-                raise
