@@ -22,7 +22,7 @@ from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.endpoints')
 @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.endpoints')
-def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_endpoints_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} endpoints'.format(name))
     if not utils.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)

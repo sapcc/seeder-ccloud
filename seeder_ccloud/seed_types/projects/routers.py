@@ -30,7 +30,7 @@ def validate(spec, dryrun, **_):
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.routers')
 @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.routers')
-def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_routers_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} routers'.format(name))
     if not utils.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)

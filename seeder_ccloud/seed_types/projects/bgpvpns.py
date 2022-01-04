@@ -37,7 +37,7 @@ def validate(spec, dryrun, **_):
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.bgpvpns')
 @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.bgpvpns')
-def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_bgpvpns_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} bgpvpns'.format(name))
     if not utils.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
