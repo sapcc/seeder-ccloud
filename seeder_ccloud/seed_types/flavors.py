@@ -17,14 +17,13 @@
 import kopf, logging
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud import utils
 from deepdiff import DeepDiff
 from novaclient import exceptions as novaexceptions
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
-def validate(spec, dryrun, **_):
+def validate_flavors(spec, dryrun, **_):
     flavors = spec.get('flavors', [])
     for flavor in flavors:
         if 'name' not in flavor or not flavor['name']:
@@ -37,24 +36,24 @@ def validate(spec, dryrun, **_):
                 raise kopf.AdmissionError("extra_specs must be a valid dict if present.")
 
 
-class Flavors(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, seeder, dry_run=False):
-        super().__init__(args, seeder, dry_run)
-        self.openstack = OpenstackHelper(self.args)
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
+def seed_flavors_handler(memo: kopf.Memo, new, old, spec, name, annotations, **_):
+    logging.info('seeding {} flavor'.format(name))
+    if not utils.is_dependency_successful(annotations):
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+    try:
+        changed = utils.get_changed_seeds(old, new)
+        Flavors(memo['args'], memo['dry_run']).seed(changed)
+    except Exception as error:
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
-    @staticmethod
-    @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
-    @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
-    def seed_flavors_handler(memo: kopf.Memo, new, old, spec, name, annotations, **_):
-        logging.info('seeding {} flavor'.format(name))
-        if not utils.is_dependency_successful(annotations):
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-        try:
-            changed = utils.get_changed_seeds(old, new)
-            memo['seeder'].all_seedtypes['flavors'].seed(changed, spec)
-        except Exception as error:
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+class Flavors():
+    def __init__(self, args, dry_run=False):
+        self.dry_run = dry_run
+        self.args = args
+        self.openstack = OpenstackHelper(args)
 
 
     def seed(self, flavors, spec):

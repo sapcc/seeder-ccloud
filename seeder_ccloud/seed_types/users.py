@@ -28,16 +28,16 @@ def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_)
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
-        u = Users(memo['args'])
-        u.seed(changed)
+        Users(memo['args']).seed(changed)
     except Exception as error:
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
 class Users():
     def __init__(self, args, dry_run=False):
-        self.openstack = OpenstackHelper(args)
         self.dry_run = dry_run
+        self.args = args
+        self.openstack = OpenstackHelper(args)
 
 
     def seed(self, users):

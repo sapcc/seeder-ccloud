@@ -19,11 +19,10 @@ from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
-def validate(spec, dryrun, **_):
+def validate_role_inferences(spec, dryrun, **_):
     role_inferences = spec.get('role_inferences', [])
     for role_inference in role_inferences:
         if 'prior_role' not in role_inference or not role_inference['prior_role']:
@@ -32,25 +31,25 @@ def validate(spec, dryrun, **_):
             raise kopf.AdmissionError("role_inferences must have a implied_role if present.")
 
 
-class Role_Inferences(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, seeder, dry_run=False):
-        super().__init__(args, seeder, dry_run)
-        self.openstack = OpenstackHelper(self.args)
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
+def seed_role_inferences_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+    logging.info('seeding {} role_inferences'.format(name))
+    if not utils.is_dependency_successful(annotations):
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+    try:
+        changed = utils.get_changed_seeds(old, new)
+        Role_Inferences(memo['args', memo['dry_run']]).seed(changed)
+    except Exception as error:
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
-    @staticmethod
-    @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
-    @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
-    def seed_role_inferences_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-        logging.info('seeding {} role_inferences'.format(name))
-        if not utils.is_dependency_successful(annotations):
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-
-        try:
-            changed = utils.get_changed_seeds(old, new)
-            memo['seeder'].all_seedtypes['role_inferences'].seed(changed)
-        except Exception as error:
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+class Role_Inferences():
+    def __init__(self, args, dry_run=False):
+        self.dry_run = dry_run
+        self.args = args
+        self.openstack = OpenstackHelper(args)
 
 
     def seed(self, role_inferences):

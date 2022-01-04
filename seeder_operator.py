@@ -178,7 +178,6 @@ def get_args():
 
 
 def main():
-    from seeder_ccloud.seeder import Seeder
     args = get_args()
     setup_logging(args)
     verbose = True if args.logLevel == 'DEBUG' else False 
@@ -186,7 +185,8 @@ def main():
 
     # either threading.Event(), or asyncio.Event(), or asyncio/concurrent Future().
     memo = kopf.Memo(my_stop_flag=threading.Event())
-    memo.seeder = Seeder(args)
+    memo['args'] = args
+    memo['dry_run'] = args.dry_run
     clusterwide = True
     if args.namespaces:
         clusterwide = False

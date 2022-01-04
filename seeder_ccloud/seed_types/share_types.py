@@ -17,29 +17,28 @@
 import logging, kopf
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud import utils
 
 
-class Share_Types(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, seeder, dry_run=False):
-        super().__init__(args, seeder, dry_run)
-        self.openstack = OpenstackHelper(self.args)
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.share_types')
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.share_types')
+def seed_share_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+    logging.info('seeding {} share_types'.format(name))
+    if not utils.is_dependency_successful(annotations):
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+    try:
+        changed = utils.get_changed_seeds(old, new)
+        Share_Types(memo['args'], memo['dry_run']).seed(changed)
+    except Exception as error:
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
-    @staticmethod
-    @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.share_types')
-    @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.share_types')
-    def seed_share_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-        logging.info('seeding {} share_types'.format(name))
-        if not utils.is_dependency_successful(annotations):
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-
-        try:
-            changed = utils.get_changed_seeds(old, new)
-            memo['seeder'].all_seedtypes['share_types'].seed(changed)
-        except Exception as error:
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+class Share_Types():
+    def __init__(self, args, dry_run=False):
+        self.dry_run = dry_run
+        self.args = args
+        self.openstack = OpenstackHelper(args)
 
 
     def seed(self, share_types):

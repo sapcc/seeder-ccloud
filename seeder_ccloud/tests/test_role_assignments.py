@@ -1,5 +1,5 @@
 import unittest, kopf
-from seeder_ccloud.seed_types.role_assignments import role_assignment_validation
+from seeder_ccloud.seed_types.role_assignments import validate_role_assignments
 
 class TestRoleAssignments(unittest.TestCase):
 
@@ -11,7 +11,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaisesRegex(kopf.AdmissionError, 'role name is mandatory', role_assignment_validation, spec, False)
+        self.assertRaisesRegex(kopf.AdmissionError, 'role name is mandatory', validate_role_assignments, spec, False)
 
     def test_validation_name(self):
         spec = {
@@ -21,7 +21,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -29,7 +29,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -38,7 +38,7 @@ class TestRoleAssignments(unittest.TestCase):
             ]
         }
         try:
-            role_assignment_validation(spec, False)
+            validate_role_assignments(spec, False)
         except Exception as e:
             self.fail("should not raise error")
 
@@ -51,7 +51,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -60,7 +60,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -70,7 +70,7 @@ class TestRoleAssignments(unittest.TestCase):
             ]
         }
         try:
-            role_assignment_validation(spec, False)
+            validate_role_assignments(spec, False)
         except Exception as e:
             self.fail("should not raise error: {}".format(e))
 
@@ -83,7 +83,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -93,7 +93,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -103,7 +103,7 @@ class TestRoleAssignments(unittest.TestCase):
             ]
         }
         try:
-            role_assignment_validation(spec, False)
+            validate_role_assignments(spec, False)
         except Exception as e:
             self.fail("should not raise error")
 
@@ -117,7 +117,7 @@ class TestRoleAssignments(unittest.TestCase):
                 }
             ]
         }
-        self.assertRaises(kopf.AdmissionError, role_assignment_validation, spec, False)
+        self.assertRaises(kopf.AdmissionError, validate_role_assignments, spec, False)
         spec = {
             'role_assignments': [
                 {   'role': 'role_name',
@@ -127,7 +127,7 @@ class TestRoleAssignments(unittest.TestCase):
             ]
         }
         try:
-            role_assignment_validation(spec, False)
+            validate_role_assignments(spec, False)
         except Exception as e:
             print(e)
             self.fail("should not raise error")
@@ -141,7 +141,7 @@ class TestRoleAssignments(unittest.TestCase):
             ]
         }
         try:
-            role_assignment_validation(spec, False)
+            validate_role_assignments(spec, False)
         except Exception as e:
             print(e)
             self.fail("should not raise error")
@@ -154,7 +154,7 @@ class TestRoleAssignments(unittest.TestCase):
             ]
         }
         try:
-            role_assignment_validation(spec, False)
+            validate_role_assignments(spec, False)
         except Exception as e:
             print(e)
             self.fail("should not raise error")

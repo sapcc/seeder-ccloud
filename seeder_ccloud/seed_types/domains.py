@@ -20,39 +20,38 @@ import logging, kopf
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
-
 from deepdiff import DeepDiff
 from keystoneclient import exceptions
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-def validate(spec, dryrun, **_):
+def validate_domains(spec, dryrun, **_):
     domains = spec.get('domains', [])
     for domain in domains:
         if 'name' not in domain or not domain['name']:
             raise kopf.AdmissionError("Domains must have a name if present..")
 
 
-class Domains(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, seeder, dry_run=False):
-        super().__init__(args, seeder, dry_run)
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
+def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+    logging.info('seeding {} == > domains'.format(name))
+    if not utils.is_dependency_successful(annotations):
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+    try:
+        changed = utils.get_changed_seeds(old, new)
+        Domains(memo['args'], memo['dry_run']).seed(changed)
+    except Exception as error:
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+    logging.info('DONE seeding {} == > domains'.format(name))
+
+
+class Domains():
+    def __init__(self, args, dry_run=False):
+        self.dry_run = dry_run
+        self.args = args
         self.openstack = OpenstackHelper(args)
 
-
-    @staticmethod
-    @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-    @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-    def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-        logging.info('seeding {} == > domains'.format(name))
-        if not utils.is_dependency_successful(annotations):
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-        try:
-            changed = utils.get_changed_seeds(old, new)
-            memo['seeder'].all_seedtypes['domains'].seed(changed)
-        except Exception as error:
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
-        logging.info('DONE seeding {} == > domains'.format(name))
    
     def seed(self, domains):
         for domain in domains:

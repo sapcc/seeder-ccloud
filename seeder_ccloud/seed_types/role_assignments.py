@@ -21,7 +21,7 @@ from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_assignments')
-def role_assignment_validation(spec, dryrun, **_):
+def validate_role_assignments(spec, dryrun, **_):
     role_assignments = spec.get('role_assignments', [])
     for assignment in role_assignments:
         if not 'role' in assignment:
@@ -51,8 +51,7 @@ def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_)
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
-        b = Role_Assignments(memo['args'])
-        b.seed(changed)
+        Role_Assignments(memo['args']).seed(changed)
     except Exception as error:
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 

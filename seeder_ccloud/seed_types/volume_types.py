@@ -18,12 +18,11 @@ import logging, kopf
 from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.volume_types')
-def validate(spec, dryrun, **_):
+def validate_volume_types(spec, dryrun, **_):
     volume_types = spec.get('volume_types', [])
     for volume_type in volume_types:
         if 'extra_specs' in volume_type:
@@ -32,25 +31,25 @@ def validate(spec, dryrun, **_):
                 raise kopf.AdmissionError("Volume_Type extra_specs is invalid..")
 
 
-class Volume_Types(BaseRegisteredSeedTypeClass):
-    def __init__(self, args, seeder, dry_run=False):
-        super().__init__(args, seeder, dry_run)
-        self.openstack = OpenstackHelper(self.args)
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.volume_types')
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.volume_types')
+def seed_volume_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+    logging.info('seeding {} volume_types'.format(name))
+    if not utils.is_dependency_successful(annotations):
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+    try:
+        changed = utils.get_changed_seeds(old, new)
+        Volume_Types(memo['args'], memo['dry_run']).seed(changed)
+    except Exception as error:
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
-    @staticmethod
-    @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.volume_types')
-    @kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.volume_types')
-    def seed_volume_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-        logging.info('seeding {} volume_types'.format(name))
-        if not utils.is_dependency_successful(annotations):
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
-
-        try:
-            changed = utils.get_changed_seeds(old, new)
-            memo['seeder'].all_seedtypes['volume_types'].seed(changed)
-        except Exception as error:
-            raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+class Volume_Types():
+    def __init__(self, args, dry_run=False):
+        self.dry_run = dry_run
+        self.args = args
+        self.openstack = OpenstackHelper(args)
 
 
     def seed(self, volume_types):
