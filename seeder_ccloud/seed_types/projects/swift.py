@@ -14,19 +14,41 @@
  limitations under the License.
 """
 
-import logging
+import logging, kopf
+from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
-
 from swiftclient import client as swiftclient
 from keystoneclient import exceptions
+from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
+
+
+@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.swifts')
+@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.swifts')
+def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+    logging.info('seeding {} swift containers'.format(name))
+    if not utils.is_dependency_successful(annotations):
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+    try:
+        changed = utils.get_changed_seeds(old, new)
+        s = Swift(memo['args'])
+        s.seed(changed)
+    except Exception as error:
+        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+
 
 class Swift():
     def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
         self.dry_run = dry_run
 
-    def seed(self, project, swift):
+
+    def seed(self, swifts):
+        for swift in swifts:
+            self._seed_swift(swift)
+    
+    
+    def _seed_swift(self, swift):
         """
         Seeds swift account and containers for a project
         :param project:
@@ -38,9 +60,11 @@ class Swift():
 
         if 'enabled' in swift and swift['enabled']:
             logging.debug(
-                "seeding swift account for project %s" % project.name)
+                "seeding swift account for project %s" % swift['project'])
 
             try:
+                project_id = self.openstack.get_project_id(swift['project'])
+                project_name = swift['project']
                 session = self.openstack.get_session()
                 service_token = session.get_token()
 
@@ -55,7 +79,7 @@ class Swift():
                         interface='admin')
 
                 storage_url = swift_endpoint.split('/AUTH_')[
-                                0] + '/AUTH_' + project.id
+                                0] + '/AUTH_' + project_id
 
                 # Create swiftclient Connection
                 conn = swiftclient.Connection(session=session,
@@ -68,19 +92,19 @@ class Swift():
                 except swiftclient.ClientException:
                     # nope, go create it
                     logging.info(
-                        'creating swift account for project %s' % project.name)
+                        'creating swift account for project %s' % project_name)
                     if not self.dry_run:
                         swiftclient.put_object(storage_url, token=service_token)
 
                 # seed swift containers
                 if 'containers' in swift:
-                    self.seed_swift_containers(project, swift['containers'],
+                    self.seed_swift_containers(project_name, swift['containers'],
                                         conn)
 
             except Exception as e:
                 logging.error(
                     "could not seed swift account for project %s: %s" % (
-                        project.name, e))
+                        project_name, e))
                 raise
 
     
@@ -94,7 +118,7 @@ class Swift():
         """
 
         logging.debug(
-            "seeding swift containers for project %s" % project.name)
+            "seeding swift containers for project %s" % project)
 
         for container in containers:
             try:
@@ -111,7 +135,7 @@ class Swift():
                         if headers[header] != result.get(header, ''):
                             logging.info(
                                 "%s differs. update container %s/%s" % (
-                                    header, project.name,
+                                    header, project,
                                     container['name']))
                             if not self.dry_run:
                                 conn.post_container(container['name'], headers)
@@ -120,11 +144,11 @@ class Swift():
                     # nope, go create it
                     logging.info(
                         'creating swift container %s/%s' % (
-                            project.name, container['name']))
+                            project, container['name']))
                     if not self.dry_run:
                         conn.put_container(container['name'], headers)
             except Exception as e:
                 logging.error(
                     "could not seed swift container for project %s: %s" % (
-                        project.name, e))
+                        project, e))
                 raise

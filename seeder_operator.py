@@ -16,7 +16,6 @@
 import asyncio
 import threading
 import kopf
-import json
 import sys
 import logging
 import argparse
@@ -76,6 +75,12 @@ def check_dependencies(spec, new, name, namespace, **kwargs):
     except Exception as error:
         raise kopf.TemporaryError('{}'.format(error), delay=30)
 
+
+"""
+@kopf.on.mutate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
+def mutate(patch: kopf.Patch, spec, **_):
+    patched = {}
+"""
 
 def has_dependency_cycle(k8s_client, seed_name, namespace, requires):
     if requires is None:

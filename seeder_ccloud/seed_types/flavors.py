@@ -19,24 +19,8 @@ from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from seeder_ccloud import utils
-
 from deepdiff import DeepDiff
 from novaclient import exceptions as novaexceptions
-
-
-"""
-@kopf.on.mutate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')
-def mutate(patch: kopf.Patch, spec, **_):
-    flavors = spec.get('flavors', [])
-    flavors_patched = []
-    for flavor in flavors:
-        flavor = utils.sanitize_dict(flavor, (
-                    'id', 'name', 'ram', 'disk', 'vcpus', 'swap', 'rxtx_factor',
-                    'is_public', 'disabled', 'ephemeral', 'extra_specs'))
-        flavors_patched.append(flavor)
-    if len(flavors_patched) != 0:
-        patch.spec['flavors'] = flavors_patched
-"""
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.flavors')

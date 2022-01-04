@@ -230,23 +230,3 @@ class OpenstackHelper:
         return session.Session(auth=plugin,
                             user_agent='openstack-seeder',
                             verify=not args.insecure)
-
-
-    @staticmethod
-    def redact(source,
-           keys=('password', 'secret', 'userPassword', 'cam_password')):
-        def _blankout(data, k):
-            if isinstance(data, list):
-                for item in data:
-                    _blankout(item, k)
-            elif isinstance(data, dict):
-                for attr in keys:
-                    if attr in data:
-                        if isinstance(data[attr], str):
-                            data[attr] = '********'
-                for k, v in data.items():
-                    _blankout(v, keys)
-
-        result = copy.deepcopy(source)
-        _blankout(result, keys)
-        return result
