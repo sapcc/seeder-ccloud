@@ -42,7 +42,7 @@ def validate_services(spec, dryrun, **_):
             try:
                 parsed = urlparse(endpoint['url'])
                 if not parsed.scheme or not parsed.netloc:
-                    raise kopf.AdmissionError("Endpoint url must be vaild if present..")
+                    raise kopf.AdmissionError("Endpoint url must be vaild..")
             except Exception:
                 raise kopf.AdmissionError("Endpoint url must be vaild if present..")
             if 'region' in endpoint:

@@ -64,8 +64,8 @@ class Flavors():
                 'id', 'name', 'ram', 'disk', 'vcpus', 'swap', 'rxtx_factor',
                 'is_public', 'disabled', 'ephemeral', 'extra_specs'))
             required_traits, mentioned_traits, required_resource_classes = self._get_traits_and_resource_classes(flavor)
-            missing_traits = list(mentioned_traits - set(self.openstack.get_traits()))
-            associated_traits = set(self.openstack.get_traits(only_associated=True))
+            missing_traits = list(mentioned_traits - set(self._get_traits()))
+            associated_traits = set(self._get_traits(only_associated=True))
             resource_classes.update(required_resource_classes)
             traits.update(missing_traits)
             if missing_traits:
@@ -178,3 +178,17 @@ class Flavors():
                             required_traits.add(trait)
         
         return required_traits, mentioned_traits, required_resource_classes
+
+
+    def _get_traits(self, only_associated=False):
+        """
+        Return the list of all traits that have been set on at least one resource provider.
+        """
+        try:
+            params = {'associated': 'true'} if only_associated else {}
+            url_params = '&'.join(f'{k}={v}' for k, v in params.items())
+            result = self.openstack.get_placementclient().request('GET', f'/traits?{url_params}')
+        except Exception as e:
+            logging.error("Failed checking for trait resource providers: {}".format(e))
+            return []
+        return result.json().get("traits", [])
