@@ -40,8 +40,7 @@ def seed_networks_handler(memo: kopf.Memo, new, old, name, annotations, **_):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
-        n = Networks(memo['args'])
-        n.seed(changed)
+        Networks(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 

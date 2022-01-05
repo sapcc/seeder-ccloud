@@ -28,8 +28,7 @@ def seed_network_quotas_handler(memo: kopf.Memo, new, old, name, annotations, **
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
-        n = Network_Quotas(memo['args'])
-        n.seed(changed)
+        Network_Quotas(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
