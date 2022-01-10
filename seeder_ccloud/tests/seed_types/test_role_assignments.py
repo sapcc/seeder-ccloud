@@ -1,7 +1,36 @@
 import unittest, kopf
-from seeder_ccloud.seed_types.role_assignments import validate_role_assignments
+from seeder_ccloud.seed_types.role_assignments import validate_role_assignments, Role_Assignments
+from unittest.mock import patch, Mock
+from keystoneclient import exceptions
+
 
 class TestRoleAssignments(unittest.TestCase):
+    @patch('seeder_ccloud.openstack.openstack_helper')
+    @patch('keystoneclient.v3.roles.RoleManager')
+    def test_role_assignment(self, openstack_mock, roles_mock):
+        openstack_mock.get_role_id.return_value = '1234'
+        openstack_mock.get_user_id.return_value = '2233'
+        openstack_mock.get_keystoneclient.return_value = roles_mock
+        ra = Role_Assignments({}, True)
+        ra.openstack = openstack_mock
+        ra.seed([{'role': 'role_name', 'user': 'user_name@domain_name'}])
+        roles_mock.roles.check.assert_called_with('1234', user= '2233')
+        openstack_mock.get_user_id.assert_called_with('domain_name', 'user_name')
+
+
+    @patch('seeder_ccloud.openstack.openstack_helper')
+    @patch('keystoneclient.v3.roles.RoleManager')
+    def test_role_assignment_grant(self, openstack_mock, roles_mock):
+        roles_mock.roles.check.side_effect = exceptions.NotFound
+        openstack_mock.get_role_id.return_value = '1234'
+        openstack_mock.get_user_id.return_value = '2233'
+        openstack_mock.get_keystoneclient.return_value = roles_mock
+        ra = Role_Assignments({}, False)
+        ra.openstack = openstack_mock
+        ra.seed([{'role': 'role_name', 'user': 'user_name@domain_name'}])
+        roles_mock.roles.check.assert_called_with('1234', user= '2233')
+        roles_mock.roles.grant.assert_called_with('1234', user= '2233')
+
 
     def test_validation_role(self):
         spec = {

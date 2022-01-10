@@ -64,12 +64,12 @@ class Role_Assignments():
 
     def seed(self, role_assignments):
         for role_assignment in role_assignments:
-            self._role_assignments(role_assignment)
+            self._seed_role_assignments(role_assignment)
 
 
-    def seed_role_assignments(self, assignment):
+    def _seed_role_assignments(self, assignment):
         logging.debug("resolving role assignment %s" % assignment)
-        keystone = self.opentrack.get_keystoneclient()
+        keystone = self.openstack.get_keystoneclient()
         role_assignment = dict()
         role = assignment.pop('role')
         role_id = self.openstack.get_role_id(role)
