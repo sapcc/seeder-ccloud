@@ -17,7 +17,7 @@ import logging, kopf
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
+from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.network_quotas')

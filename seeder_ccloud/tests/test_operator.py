@@ -1,6 +1,6 @@
 import unittest
 import kopf
-from seeder_operator import has_dependency_cycle, resolve_requires
+from seeder_ccloud.seeder_operator import has_dependency_cycle, resolve_requires
 from seeder_ccloud.tests.mock import kubernetes
 
 

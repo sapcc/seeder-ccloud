@@ -19,7 +19,7 @@ import difflib
 import pprint
 import kopf
 import json
-from seeder_operator import PREFIX
+from seeder_ccloud.seeder_operator import PREFIX
 
 
 # https://github.com/python/cpython/blob/3.8/Lib/unittest/case.py#L1201

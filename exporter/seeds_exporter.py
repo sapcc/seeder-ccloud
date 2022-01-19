@@ -4,7 +4,7 @@ from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from kubernetes import client, config
 from time import sleep
 from kopf._cogs.structs import bodies
-from seeder_operator import PREFIX, SEED_CRD
+from seeder_ccloud.seeder_operator import PREFIX, SEED_CRD
 import logging
 
 try:

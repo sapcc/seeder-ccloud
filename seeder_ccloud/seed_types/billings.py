@@ -16,7 +16,7 @@
 
 import logging, kopf
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
+from seeder_ccloud.seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 
 

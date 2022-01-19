@@ -20,7 +20,7 @@ from designateclient.v2 import client as designateclient
 from deepdiff import DeepDiff
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
+from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
 
 @kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.projects')

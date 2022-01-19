@@ -20,7 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from swiftclient import client as swiftclient
 from keystoneclient import exceptions
-from seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
+from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
 
 @kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.swifts')
