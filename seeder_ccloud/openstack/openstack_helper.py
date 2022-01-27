@@ -107,7 +107,7 @@ class OpenstackHelper:
     @cached(id_cache)
     def get_domain_id(self, name):
         """ get a (cached) domain-id for a domain name """
-        domains = self.keystone.domains.list(name=name)
+        domains = self.get_keystoneclient().domains.list(name=name)
         if domains:
             return domains[0].id
         else:
@@ -117,7 +117,7 @@ class OpenstackHelper:
     @cached(id_cache)
     def get_project_id(self, domain, name):
         """ get a (cached) project-id for a domain and project name """
-        projects = self.keystone.projects.list(
+        projects = self.get_keystoneclient().projects.list(
             domain=self.get_domain_id(domain),
             name=name)
         if projects:
@@ -129,7 +129,7 @@ class OpenstackHelper:
     @cached(id_cache)
     def get_user_id(self, domain, name):
         """ get a (cached) user-id for a domain and user name """
-        users = self.keystone.users.list(
+        users = self.get_keystoneclient().users.list(
             domain=self.get_domain_id(domain),
             name=name)
         if users:
@@ -141,7 +141,7 @@ class OpenstackHelper:
     @cached(id_cache)
     def get_group_id(self, domain, name):
         """ get a (cached) group-id for a domain and group name """
-        groups = self.keystone.groups.list(
+        groups = self.get_keystoneclient().groups.list(
             domain=self.get_domain_id(domain),
             name=name)
         if groups:
