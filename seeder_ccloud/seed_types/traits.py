@@ -15,16 +15,16 @@
 """
 
 import logging, kopf
-from seeder_ccloud.seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
+config = utils.Config()
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.traits')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.traits')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.traits')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.traits')
 def seed_traits_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} traits'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
     try:

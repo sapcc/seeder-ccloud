@@ -17,10 +17,10 @@ import logging, kopf
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_assignments')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_assignments')
 def validate_role_assignments(spec, dryrun, **_):
     role_assignments = spec.get('role_assignments', [])
     for assignment in role_assignments:
@@ -43,11 +43,11 @@ def validate_role_assignments(spec, dryrun, **_):
             raise kopf.AdmissionError("setting project and domain at the same time is not allowed")
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_assignments')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_assignments')
-def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_assignments')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_assignments')
+def seed_role_assignments_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} role_assignments'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)

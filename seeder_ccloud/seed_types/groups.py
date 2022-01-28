@@ -18,14 +18,14 @@ from deepdiff import DeepDiff
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
+config = utils.Config()
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.groups')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.groups')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.groups')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.groups')
 def seed_groups_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-    logging.info('seeding {} flavor'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    logging.info('seeding {} groups'.format(name))
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)

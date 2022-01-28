@@ -14,16 +14,15 @@
  limitations under the License.
 """
 
-import copy
 import logging, kopf
-from seeder_ccloud.seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
 from urllib.parse import urlparse
 from deepdiff import DeepDiff
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.services')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.services')
 def validate_services(spec, dryrun, **_):
     services = spec.get('services', [])
     for service in services:
@@ -51,11 +50,11 @@ def validate_services(spec, dryrun, **_):
                     raise kopf.AdmissionError("Endpoint region must be vaild if present..")
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.roles')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.roles')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.roles')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.roles')
 def seed_roles_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} roles'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
     try:

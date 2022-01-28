@@ -17,10 +17,10 @@ import logging, kopf
 from designateclient.v2 import client as designateclient
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.subnet_pools')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.subnet_pools')
 def validate(spec, dryrun, **_):
     subnet_pools = spec.get('subnet_pools', [])
     for subnet_pool in subnet_pools:
@@ -29,11 +29,11 @@ def validate(spec, dryrun, **_):
         
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.subnet_pools')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.subnet_pools')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.subnet_pools')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.subnet_pools')
 def seed_subnet_pools_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} subnet_pools'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)

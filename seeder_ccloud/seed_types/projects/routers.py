@@ -17,10 +17,10 @@ import logging, kopf
 import re
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.routers')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.routers')
 def validate(spec, dryrun, **_):
     routers = spec.get('routers', [])
     for router in routers:
@@ -28,11 +28,11 @@ def validate(spec, dryrun, **_):
             raise kopf.AdmissionError("Router must have a name...")
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.routers')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.routers')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.routers')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.routers')
 def seed_routers_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} routers'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)

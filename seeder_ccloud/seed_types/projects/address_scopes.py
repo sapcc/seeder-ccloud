@@ -16,11 +16,11 @@
 import logging, kopf
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 from subnet_pools import Subnet_Pools
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.address_scopes')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.address_scopes')
 def validate(spec, dryrun, **_):
     address_scopes = spec.get('address_scopes', [])
     for address_scope in address_scopes:
@@ -33,11 +33,11 @@ def validate(spec, dryrun, **_):
         
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.address_scopes')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.address_scopes')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.address_scopes')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.address_scopes')
 def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} address_scopes'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)

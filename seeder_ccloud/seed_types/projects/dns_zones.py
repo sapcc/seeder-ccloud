@@ -17,10 +17,10 @@ import logging, kopf
 from designateclient.v2 import client as designateclient
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seeder_operator import SEED_CRD, OPERATOR_ANNOTATION
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.dns_zones')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.dns_zones')
 def validate(spec, dryrun, **_):
     dns_zones = spec.get('dns_zones', [])
     for dns_zone in dns_zones:
@@ -28,11 +28,11 @@ def validate(spec, dryrun, **_):
             raise kopf.AdmissionError("dns_zone must have a name...")
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.dns_zones')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.dns_zones')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.dns_zones')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.dns_zones')
 def seed_dns_zones_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} dns_zones'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)

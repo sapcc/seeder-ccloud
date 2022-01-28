@@ -15,17 +15,17 @@
 """
 
 import logging, kopf
-from seeder_ccloud.seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from osc_placement.resources.resource_class import PER_CLASS_URL
 
+config = utils.Config()
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.resource_classes')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.resource_classes')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.resource_classes')
 def seed_resource_classes_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} resource_classes'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
     try:

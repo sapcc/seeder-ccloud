@@ -15,13 +15,13 @@
 """
 
 import logging, kopf
-from seeder_ccloud.seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_inferences')
 def validate_role_inferences(spec, dryrun, **_):
     role_inferences = spec.get('role_inferences', [])
     for role_inference in role_inferences:
@@ -31,11 +31,11 @@ def validate_role_inferences(spec, dryrun, **_):
             raise kopf.AdmissionError("role_inferences must have a implied_role if present.")
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.role_inferences')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_inferences')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_inferences')
 def seed_role_inferences_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} role_inferences'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
     try:

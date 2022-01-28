@@ -14,17 +14,16 @@
  limitations under the License.
 """
 
-import copy
-from functools import cmp_to_key
 import logging, kopf
-from seeder_ccloud.seeder_operator import OPERATOR_ANNOTATION, SEED_CRD
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
 from keystoneclient import exceptions
 
+config = utils.Config()
 
-@kopf.on.validate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
+
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.domains')
 def validate_domains(spec, dryrun, **_):
     domains = spec.get('domains', [])
     for domain in domains:
@@ -32,11 +31,11 @@ def validate_domains(spec, dryrun, **_):
             raise kopf.AdmissionError("Domains must have a name if present..")
 
 
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.domains')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.domains')
 def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} == > domains'.format(name))
-    if not utils.is_dependency_successful(annotations):
+    if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
