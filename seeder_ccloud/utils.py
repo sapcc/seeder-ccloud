@@ -14,12 +14,82 @@
  limitations under the License.
 """
 
-import copy
+import copy, sys, os
 import difflib
 import pprint
-import kopf
 import json
-from seeder_ccloud.seeder_operator import PREFIX
+from configparser import ConfigParser
+import argparse
+from keystoneauth1.loading import cli
+
+
+class Config:
+    _singleton = None
+    crd_info = None
+    prefix = None
+    operator_version = None
+
+    def __new__(cls):
+        if not cls._singleton:
+            cls._singleton = super(Config, cls).__new__(cls)
+            
+            config = ConfigParser()
+            try:
+                config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
+            except Exception as e:
+                sys.Exit(0)
+            
+            cls.prefix = 'seeder.ccloud.cloud.sap'
+            cls.operator_version = config.get('operator', 'version')
+            cls.crd_info = {
+                'version': config.get('crd_names', 'version'),
+                'group': config.get('crd_names', 'group'),
+                'kind': config.get('crd_names', 'kind'),
+                'plural': config.get('crd_names', 'plural'),
+            }
+        return cls._singleton
+
+    def get_args(self):
+        if self.args is not None:
+            return self.args
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--input',
+                            help='the yaml file with the identity configuration')
+        parser.add_argument('--interface',
+                            help='the keystone interface-type to use',
+                            default='internal',
+                            choices=['admin', 'public', 'internal'])
+        parser.add_argument('--insecure',
+                            help='do not verify SSL certificates',
+                            default=False,
+                            action='store_true')
+        parser.add_argument("-l", "--log", dest="logLevel",
+                            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR',
+                                    'CRITICAL'],
+                            help="Set the logging level",
+                            default='INFO')
+        parser.add_argument('--dry-run', default=False, action='store_true',
+                            help='Only parse the seed, do no actual seeding.')
+        parser.add_argument('--max-workers', default=1, dest="max_workers",
+                            help='Max workers for the kopf operator.')
+        parser.add_argument("--namespace-patterns", dest="namespaces",
+                            help="list of namespace patterns. default is cluster wide",
+                            default='')
+        cli.register_argparse_arguments(parser, sys.argv[1:])
+        self.args = parser.parse_args()
+        return self.args
+
+    def is_dependency_successful(self, annotations):
+        dep = annotations.get(self.prefix + '/check_dependencies', None)
+
+        if dep is None:
+            return True
+            
+        depStatus = json.loads(dep)
+        if not depStatus['success']:
+            return False
+
+        return True
 
 
 # https://github.com/python/cpython/blob/3.8/Lib/unittest/case.py#L1201
@@ -44,19 +114,6 @@ def sanitize_dict(source, keys):
     return result
 
 
-def is_dependency_successful(annotations):
-    dep = annotations.get(PREFIX + '/check_dependencies', None)
-
-    if dep is None:
-        return True
-        
-    depStatus = json.loads(dep)
-    if not depStatus['success']:
-        return False
-
-    return True
-
-
 def get_changed_seeds(old, new):
     new_copy = copy.deepcopy(new)
     old_copy = copy.deepcopy(old)
@@ -67,13 +124,3 @@ def get_changed_seeds(old, new):
         changed = [i for i in new_copy if i not in old_copy]
     
     return changed
-
-
-def get_changed_sub_seeds(old, new, key):
-    """
-    compares the values from the key and returns a list of
-    changed values
-    """
-    new = new.pop(key, [])
-    old = old.pop(key, [])
-    return [i for i in new if i not in old]
