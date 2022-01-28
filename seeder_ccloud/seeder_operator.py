@@ -16,51 +16,47 @@
 import asyncio
 import threading
 import kopf
-import sys
 import logging
-import argparse
-from kubernetes import config, client
+from kubernetes import client
+from kubernetes import config as k8s_config
 from kubernetes.client.rest import ApiException
-from keystoneauth1.loading import cli
 from kopf._cogs.structs import bodies
+from seeder_ccloud import utils
 
-PREFIX = 'seeder.ccloud.sap.com'
-OPERATOR_ANNOTATION = 'seeder-ccloud'
+import seeder_ccloud.crd_legacy_mutate
+import seeder_ccloud.seed_types.domains
+import seeder_ccloud.seed_types.groups
+import seeder_ccloud.seed_types.role_assignments
+import seeder_ccloud.seed_types.projects.projects
 
-SEED_CRD = {
-    'version': 'v1',
-    'group': 'kopf.dev',
-    'kind': 'kopfexample',
-    'plural': 'kopfexamples',
-}
 
+config = utils.Config()
 operator_storage = kopf.AnnotationsDiffBaseStorage(
-    prefix=PREFIX,
+    prefix=config.prefix,
     key='last-handled-configuration',
 )
 
-
 @kopf.on.startup()
 def startup(settings: kopf.OperatorSettings, **kwargs):
-    args = get_args()
+    args = config.get_args()
     # Load kubernetes_asyncio config as kopf does not do that automatically for us.
     try:
-        config.load_kube_config()
+        k8s_config.load_kube_config()
         settings.admission.server = kopf.WebhookNgrokTunnel(port=88)
         settings.admission.server.insecure = True
-    except config.ConfigException:
+    except k8s_config.ConfigException:
         settings.admission.server = kopf.WebhookServer()
-        config.load_incluster_config()
+        k8s_config.load_incluster_config()
 
     logging.info('starting operator with {} workers'.format(int(args.max_workers)))
     settings.execution.max_workers = int(args.max_workers)
-    settings.admission.managed = 'seeder.ccloud'
+    settings.admission.managed = 'seeder.cloud.sap'
     settings.persistence.diffbase_storage = operator_storage
-    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=PREFIX)
+    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=config.prefix)
 
 
-@kopf.on.create(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION})
-@kopf.on.update(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION})
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version})
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version})
 def check_dependencies(spec, new, name, namespace, **kwargs):
     requires = spec.get('requires', None)
     logging.info('checking dependencies for seed {}'.format(name))
@@ -76,12 +72,6 @@ def check_dependencies(spec, new, name, namespace, **kwargs):
         raise kopf.TemporaryError('{}'.format(error), delay=30)
 
 
-"""
-@kopf.on.mutate(SEED_CRD['plural'], annotations={'operatorVersion': OPERATOR_ANNOTATION}, field='spec.domains')
-def mutate(patch: kopf.Patch, spec, **_):
-    patched = {}
-"""
-
 def has_dependency_cycle(k8s_client, seed_name, namespace, requires):
     if requires is None:
         return False
@@ -95,9 +85,9 @@ def has_dependency_cycle(k8s_client, seed_name, namespace, requires):
                 continue
             try:
                 res = api.get_namespaced_custom_object_status(
-                    group=SEED_CRD['group'], 
-                    version=SEED_CRD['version'],
-                    plural=SEED_CRD['plural'],
+                    group=config.crd_info['group'], 
+                    version=config.crd_info['version'],
+                    plural=config.crd_info['plural'],
                     namespace=name[0],
                     name=name[1],
                 )
@@ -123,9 +113,9 @@ def resolve_requires(k8s_client, requires):
         # namespace/seed_name
         name = re.split("/")
         res = api.get_namespaced_custom_object_status(
-            group=SEED_CRD['group'], 
-            version=SEED_CRD['version'],
-            plural=SEED_CRD['plural'],
+            group=config.crd_info['group'], 
+            version=config.crd_info['version'],
+            plural=config.crd_info['plural'],
             namespace=name[0],
             name=name[1],
         )
@@ -142,47 +132,18 @@ def resolve_requires(k8s_client, requires):
             raise kopf.TemporaryError('dependency not reconsiled with latest configuration yet')
 
 
-def setup_logging(args):
+def setup_logging(logLevel):
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
         datefmt='%d.%m.%Y %H:%M:%S',
-        level=getattr(logging, args.logLevel))
-
-
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input',
-                        help='the yaml file with the identity configuration')
-    parser.add_argument('--interface',
-                        help='the keystone interface-type to use',
-                        default='internal',
-                        choices=['admin', 'public', 'internal'])
-    parser.add_argument('--insecure',
-                        help='do not verify SSL certificates',
-                        default=False,
-                        action='store_true')
-    parser.add_argument("-l", "--log", dest="logLevel",
-                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR',
-                                 'CRITICAL'],
-                        help="Set the logging level",
-                        default='INFO')
-    parser.add_argument('--dry-run', default=False, action='store_true',
-                        help='Only parse the seed, do no actual seeding.')
-    parser.add_argument('--max-workers', default=1, dest="max_workers",
-                        help='Max workers for the kopf operator.')
-    parser.add_argument("--namespace-patterns", dest="namespaces",
-                        help="list of namespace patterns. default is cluster wide",
-                        default='')
-    cli.register_argparse_arguments(parser, sys.argv[1:])
-    return parser.parse_args()
+        level=getattr(logging, logLevel))
 
 
 def main():
-    args = get_args()
-    setup_logging(args)
+    args = config.get_args()
+    setup_logging(args.logLevel)
     verbose = True if args.logLevel == 'DEBUG' else False 
     kopf.configure(verbose=verbose, log_prefix=True)  # purely for logging
-
     # either threading.Event(), or asyncio.Event(), or asyncio/concurrent Future().
     memo = kopf.Memo(my_stop_flag=threading.Event())
     memo['args'] = args
