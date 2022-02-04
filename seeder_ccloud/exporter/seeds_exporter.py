@@ -16,10 +16,16 @@ except config.ConfigException:
 try:
     config = utils.Config()
 except Exception as e:
-    print(e)
-    sys.Exit(0)
+    logging.error(e)
+    sys.exit(0)
 
 class SeedsCollector(object):
+    def __init__(self):
+        self.storage = kopf.AnnotationsDiffBaseStorage(
+            prefix=config.prefix,
+            key='last-handled-configuration',
+        )
+
     def describe(self):
         yield GaugeMetricFamily('ccloud_seeds_total', 'Shows number of seeds')
         yield GaugeMetricFamily('ccloud_seeds_status', 'Shows the status of a single seed')
@@ -35,17 +41,14 @@ class SeedsCollector(object):
         )
         total.add_metric(labels=[], value=len(seeds['items']))
         yield total
-        storage = kopf.AnnotationsDiffBaseStorage(
-            prefix=config.prefix,
-            key='last-handled-configuration',
-        )
+
         for seed in seeds['items']:
             try:
                 body = bodies.Body(seed)
-                lastHandeld = storage.fetch(body=body)
+                lastHandeld = self.storage.fetch(body=body)
                 if lastHandeld is None:
                     status.add_metric(labels=[meta.name], value=0.0)
-
+                    continue
                 meta = bodies.Meta(seed)
                 if lastHandeld['spec'] != seed['spec']:
                     status.add_metric(labels=[meta.name], value=0.0)
