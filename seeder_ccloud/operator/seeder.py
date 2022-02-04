@@ -19,7 +19,7 @@ import kopf
 import logging
 from kubernetes import config as k8s_config
 from seeder_ccloud import utils
-from seeder_ccloud.operator import handlers
+from seeder_ccloud.operator.handlers import Handlers
 
 
 config = utils.Config()
@@ -36,6 +36,7 @@ def startup(settings: kopf.OperatorSettings, **kwargs):
         k8s_config.load_kube_config()
         settings.admission.server = kopf.WebhookNgrokTunnel(port=88)
         settings.admission.server.insecure = True
+        settings.admission.managed = 'seeder.cloud.sap'
     except k8s_config.ConfigException:
         k8s_config.load_incluster_config()
         settings.admission.server = kopf.WebhookServer(addr='0.0.0.0', port=80, insecure=True)
@@ -68,8 +69,8 @@ def main():
     if args.namespaces:
         clusterwide = False
 
-    handlers.load_dependency(operator_storage)
-    handlers.load_seedtypes()
+    h = Handlers(operator_storage)
+    h.setup()
 
     asyncio.run(kopf.operator(
         memo=memo, 
