@@ -17,7 +17,6 @@
 import logging, kopf
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_type_registry import BaseRegisteredSeedTypeClass
 from swiftclient import client as swiftclient
 from keystoneclient import exceptions
 
