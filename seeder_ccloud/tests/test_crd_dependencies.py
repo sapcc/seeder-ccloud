@@ -3,10 +3,13 @@ import kopf
 from seeder_ccloud.operator.handlers import Handlers
 from seeder_ccloud.tests.mock import kubernetes
 
-
+operator_storage = kopf.AnnotationsDiffBaseStorage(
+    prefix='seeder.ccloud.cloud.sap',
+    key='last-handled-configuration',
+)
+handlers = Handlers(operator_storage)
 
 class TestOperator(unittest.TestCase):
-    
     def test_has_dependency_cycle(self):
         list = {
             "seed01": {
@@ -31,7 +34,7 @@ class TestOperator(unittest.TestCase):
             }
         }
         c = kubernetes.CustomObjectsApi(list)
-        dep = has_dependency_cycle(c, 'seed01', 'namespace01', ['namespace01/seed02'])
+        dep = handlers.has_dependency_cycle(c, 'seed01', 'namespace01', ['namespace01/seed02'])
         self.assertTrue(dep)
 
 
@@ -59,7 +62,7 @@ class TestOperator(unittest.TestCase):
             }
         }
         c = kubernetes.CustomObjectsApi(list)
-        dep = has_dependency_cycle(c, 'seed01', 'namespace01', ['namespace01/seed02'])
+        dep = handlers.has_dependency_cycle(c, 'seed01', 'namespace01', ['namespace01/seed02'])
         self.assertFalse(dep)
 
 
@@ -78,7 +81,7 @@ class TestOperator(unittest.TestCase):
             }
         }
         c = kubernetes.CustomObjectsApi(list)
-        self.assertRaisesRegex(kopf._core.actions.execution.TemporaryError, 'dependency not reconsiled yet', resolve_requires, c, ['namespace01/seed02', 'namespace01/seed04'])
+        self.assertRaisesRegex(kopf._core.actions.execution.TemporaryError, 'dependency not reconsiled yet', handlers.resolve_requires, c, ['namespace01/seed02', 'namespace01/seed04'])
 
     
     def test_resolve_requires(self):
@@ -89,7 +92,7 @@ class TestOperator(unittest.TestCase):
                 },
                 "metadata": {
                     "annotations": {
-                        "seeder.ccloud.sap.com/last-handled-configuration": '{"spec": {"domains": "somedata"}}'
+                        operator_storage.prefix + "/last-handled-configuration": '{"spec": {"domains": "somedata"}}'
                     }
                 },
                 "spec": {
@@ -107,7 +110,7 @@ class TestOperator(unittest.TestCase):
                 },
                 "metadata": {
                     "annotations": {
-                        "seeder.ccloud.sap.com/last-handled-configuration": '{"spec": {"domains": "somedata"}}'
+                        operator_storage.prefix + "/last-handled-configuration": '{"spec": {"domains": "somedata"}}'
                     }
                 },
                 "spec": {
@@ -117,7 +120,7 @@ class TestOperator(unittest.TestCase):
         }
         c = kubernetes.CustomObjectsApi(list)
         try:
-            resolve_requires(c, ['namespace01/seed02', 'namespace01/seed04'])
+            handlers.resolve_requires(c, ['namespace01/seed02', 'namespace01/seed04'])
         except:
             self.fail("should not raise error")
 
@@ -130,7 +133,7 @@ class TestOperator(unittest.TestCase):
                 },
                 "metadata": {
                     "annotations": {
-                        "seeder.ccloud.sap.com/last-handled-configuration": '{"spec": {"domains": "somedata"}}'
+                        operator_storage.prefix + "/last-handled-configuration": '{"spec": {"domains": "somedata"}}'
                     }
                 },
                 "spec": {
@@ -148,7 +151,7 @@ class TestOperator(unittest.TestCase):
                 },
                 "metadata": {
                     "annotations": {
-                        "seeder.ccloud.sap.com/last-handled-configuration": '{"spec": {"domains": "somedata2"}}'
+                        operator_storage.prefix + "/last-handled-configuration": '{"spec": {"domains": "somedata2"}}'
                     }
                 },
                 "spec": {
@@ -157,4 +160,4 @@ class TestOperator(unittest.TestCase):
             }
         }
         c = kubernetes.CustomObjectsApi(list)
-        self.assertRaisesRegex(kopf._core.actions.execution.TemporaryError, 'dependency not reconsiled with latest configuration yet', resolve_requires, c, ['namespace01/seed02', 'namespace01/seed04'])
+        self.assertRaisesRegex(kopf._core.actions.execution.TemporaryError, 'dependency not reconsiled with latest configuration yet', handlers.resolve_requires, c, ['namespace01/seed02', 'namespace01/seed04'])
