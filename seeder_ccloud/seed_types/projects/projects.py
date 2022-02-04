@@ -34,7 +34,7 @@ def validate(spec, dryrun, **_):
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.projects')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.projects')
 def seed_projects_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-    logging.info('seeding {} flavor'.format(name))
+    logging.info('seeding {} projects'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
