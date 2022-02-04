@@ -27,6 +27,7 @@ class Config:
     _singleton = None
     crd_info = None
     prefix = None
+    args = None
     operator_version = None
 
     def __new__(cls):
@@ -34,10 +35,8 @@ class Config:
             cls._singleton = super(Config, cls).__new__(cls)
             
             config = ConfigParser()
-            try:
-                config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
-            except Exception as e:
-                sys.Exit(0)
+            cls.args = cls.get_args(cls)
+            config.read(cls.args.config_file)
             
             cls.prefix = 'seeder.ccloud.cloud.sap'
             cls.operator_version = config.get('operator', 'version')
@@ -53,8 +52,8 @@ class Config:
         if self.args is not None:
             return self.args
         parser = argparse.ArgumentParser()
-        parser.add_argument('--input',
-                            help='the yaml file with the identity configuration')
+        parser.add_argument('--config-file',
+                            help='operator config file path', default='./etc/config.ini', dest='config_file')
         parser.add_argument('--interface',
                             help='the keystone interface-type to use',
                             default='internal',
