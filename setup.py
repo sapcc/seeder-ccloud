@@ -25,7 +25,7 @@ setup(
     description='Seeder CCloud',
     entry_points = {
         "console_scripts": [
-            'seeder_ccloud = seeder_ccloud.operator.seeder_operator:main',
+            'seeder_ccloud = seeder_ccloud.operator.seeder:main',
             'exporter = seeder_ccloud.exporter.seeds_exporter:main',
         ]
     },
