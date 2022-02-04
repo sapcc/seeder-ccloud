@@ -1,5 +1,5 @@
 import unittest, kopf
-from seeder_ccloud.seed_types.role_assignments import validate_role_assignments, Role_Assignments
+from seeder_ccloud.handlers.role_assignments import validate_role_assignments, Role_Assignments
 from unittest.mock import patch, Mock
 from keystoneclient import exceptions
 

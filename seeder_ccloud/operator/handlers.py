@@ -30,10 +30,12 @@ class Handlers():
                 raise kopf.TemporaryError('{}'.format(error), delay=30)
 
         import seeder_ccloud.operator.crd_legacy_mutate
-        import seeder_ccloud.seed_types.domains
-        import seeder_ccloud.seed_types.groups
-        import seeder_ccloud.seed_types.role_assignments
-        import seeder_ccloud.seed_types.projects.projects
+        import seeder_ccloud.handlers.regions
+        import seeder_ccloud.handlers.domains
+        import seeder_ccloud.handlers.flavors
+        import seeder_ccloud.handlers.groups
+        import seeder_ccloud.handlers.role_assignments
+        import seeder_ccloud.handlers.projects.projects
 
 
     def has_dependency_cycle(self, k8s_client, seed_name, namespace, requires):

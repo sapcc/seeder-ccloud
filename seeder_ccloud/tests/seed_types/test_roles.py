@@ -1,6 +1,6 @@
 import unittest, kopf
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_types.roles import Roles
+from seeder_ccloud.handlers.roles import Roles
 from unittest.mock import patch, Mock
 from keystoneclient.v3.roles import Role
 

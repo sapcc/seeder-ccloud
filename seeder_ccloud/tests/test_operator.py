@@ -1,10 +1,12 @@
 import unittest
 import kopf
-from seeder_ccloud.seeder_operator import has_dependency_cycle, resolve_requires
+from seeder_ccloud.operator.handlers import Handlers
 from seeder_ccloud.tests.mock import kubernetes
 
 
+
 class TestOperator(unittest.TestCase):
+    
     def test_has_dependency_cycle(self):
         list = {
             "seed01": {

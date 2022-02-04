@@ -1,6 +1,6 @@
 import unittest, kopf
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from seeder_ccloud.seed_types.services import Services
+from seeder_ccloud.handlers.services import Services
 from unittest.mock import patch
 from keystoneclient.v3.services import Service
 
