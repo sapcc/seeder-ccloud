@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ccloud-seeder
+  namespace: monsoon3
+  labels:
+    type: operator
+    service: ccloud-seeder
+spec:
+  selector:
+    app: ccloud-seeder
+  ports:
+    - name: metrics
+      port: 9000
+    - name: webhook
+      port: 80

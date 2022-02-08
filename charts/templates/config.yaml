@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ccloud-seeder
+  namespace: monsoon3
+data:
+  config.ini: |
+    [operator]
+    version = 1.0
+    [crd_names]
+    version = v1
+    group = seeder.cloud.sap
+    kind = CcloudSeed
+    plural = ccloudseeds

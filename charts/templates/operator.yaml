@@ -1,0 +1,94 @@
+apiVersion: "apps/v1"
+kind: Deployment
+metadata:
+  labels:
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    app: ccloud-seeder
+  name: ccloud-seeder
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ccloud-seeder
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: ccloud-seeder
+        release: {{ .Release.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/targets: "openstack"
+    spec:
+      serviceAccount: ccloud-seeder
+      serviceAccountName: ccloud-seeder
+      containers:
+      - name: operator
+        image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.image_tag }}"
+        command:
+          - seeder_ccloud
+          - --log=DEBUG
+          - --config-file=/etc/operator/config.ini
+        volumeMounts:
+          - name: config
+            mountPath: /etc/operator
+            readOnly: true
+        ports:
+          - containerPort: 80
+            name: webhook
+        env:
+        - name: OS_AUTH_TYPE
+          value: "v3password"
+        - name: OS_REGION
+          value: {{ .Values.global.region }}
+        - name: OS_AUTH_URL
+          valueFrom:
+            secretKeyRef:
+              name: ccloud-seeder
+              key: OS_AUTH_URL
+        - name: OS_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: ccloud-seeder
+              key: OS_USERNAME
+        - name: OS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ccloud-seeder
+              key: OS_PASSWORD
+        - name: OS_USER_DOMAIN_ID
+          valueFrom:
+            secretKeyRef:
+              name: ccloud-seeder
+              key: OS_USER_DOMAIN_ID
+        - name: OS_PROJECT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: ccloud-seeder
+              key: OS_PROJECT_NAME
+        - name: OS_PROJECT_DOMAIN_ID
+          valueFrom:
+            secretKeyRef:
+              name: ccloud-seeder
+              key: OS_PROJECT_DOMAIN_ID
+      - name: exporter
+        image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.image_tag }}"
+        ports:
+        - containerPort: 9000
+          name: metrics
+        command:
+          - exporter
+          - --config-file=/etc/operator/config.ini
+        volumeMounts:
+          - name: config
+            mountPath: /etc/operator
+            readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: ccloud-seeder

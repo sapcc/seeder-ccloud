@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: monsoon3
+    disco: "true"
+  labels:
+    app: ccloud-seeder
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+  name: ccloud-seeder-webhook
+  namespace: monsoon3
+spec:
+  rules:
+  - host: ccloud-seeder.{{ .Values.global.region }}.cloud.sap
+    http:
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: ccloud-seeder
+              port:
+                number: 80
+  tls:
+  - hosts:
+    - ccloud-seeder.{{ .Values.global.region }}.cloud.sap
+    secretName: tls-ccloud-seeder-{{ .Values.global.region }}-cloud-sap
