@@ -4,8 +4,6 @@ LABEL source_repository="https://github.com/sapcc/seeder-ccloud"
 
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
-COPY certificates/* /usr/local/share/ca-certificates/
-
 RUN echo 'precedence ::ffff:0:0/96  100' >> /etc/gai.conf && \
     apt-get update && \
     apt-get dist-upgrade -y && \
