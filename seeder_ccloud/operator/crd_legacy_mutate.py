@@ -8,14 +8,12 @@ project_extract_types = [
     'bgpvpns',
     'dns_zones',
     'endpoints',
-    'network_quotes',
+    'network_quota',
     'networks',
     'projects',
     'routers',
-    'subnet_pools',   
     'swift',
 ]
-
 @kopf.on.mutate(config.crd_info['plural'], annotations={'legacy': 'True', 'operatorVersion': config.operator_version}, field='spec.domains')
 def mutate_domains(patch: kopf.Patch, spec, **kwargs):
     groups = []
@@ -69,9 +67,28 @@ def mutate_project(project, project_seed_types):
         for seed in seed_type:
             seed['domain'] = project['domain']
             seed['project'] = project['name']
+        if name == 'address_scopes':
+            mutate_address_scopes(seed_type, project_seed_types)
+        if name == 'network_quota':
+            name = 'network_quotas'
         if name not in project_seed_types:
             project_seed_types[name] = []
         project_seed_types[name] = project_seed_types[name] + project.get(name, [])
 
     for p in project_extract_types:
         project.pop(p, None)
+
+
+def mutate_address_scopes(address_scope, project_seed_types):
+    for name, seed_type in address_scope.items():
+        if name != 'subnet_pools':
+            continue
+        for seed in seed_type:
+            seed['domain'] = address_scope['domain']
+            seed['project'] = address_scope['name']
+        if name not in project_seed_types:
+            project_seed_types[name] = []
+        project_seed_types[name] = project_seed_types[name] + address_scope.get(name, [])
+
+    for p in address_scope_extract_types:
+        address_scope.pop(p, None)
