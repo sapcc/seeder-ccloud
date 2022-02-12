@@ -61,19 +61,22 @@ def mutate_domains(patch: kopf.Patch, spec, **kwargs):
 
 
 def mutate_project(project, project_seed_types):
+    rename = ''
     for name, seed_type in project.items():
         if name not in project_extract_types:
             continue
+        rename = name
+        if name == 'network_quota':
+            rename = 'network_quotas'
+        
         for seed in seed_type:
             seed['domain'] = project['domain']
             seed['project'] = project['name']
-        if name == 'address_scopes':
-            mutate_address_scopes(seed_type, project_seed_types)
-        if name == 'network_quota':
-            name = 'network_quotas'
-        if name not in project_seed_types:
-            project_seed_types[name] = []
-        project_seed_types[name] = project_seed_types[name] + project.get(name, [])
+            if rename == 'address_scopes':
+                mutate_address_scopes(seed, project_seed_types)
+        if rename not in project_seed_types:
+            project_seed_types[rename] = []
+        project_seed_types[rename] = project_seed_types[rename] + project.get(rename, [])
 
     for p in project_extract_types:
         project.pop(p, None)
@@ -90,5 +93,4 @@ def mutate_address_scopes(address_scope, project_seed_types):
             project_seed_types[name] = []
         project_seed_types[name] = project_seed_types[name] + address_scope.get(name, [])
 
-    for p in address_scope_extract_types:
-        address_scope.pop(p, None)
+        address_scope.pop('subnet_pools', None)
