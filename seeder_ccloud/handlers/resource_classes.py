@@ -21,8 +21,8 @@ from osc_placement.resources.resource_class import PER_CLASS_URL
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.resource_classes')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.resource_classes')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.resource_classes')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.resource_classes')
 def seed_resource_classes_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} resource_classes'.format(name))
     if not config.is_dependency_successful(annotations):

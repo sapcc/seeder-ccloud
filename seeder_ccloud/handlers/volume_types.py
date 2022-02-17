@@ -20,7 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.volume_types')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.volume_types')
 def validate_volume_types(spec, dryrun, **_):
     volume_types = spec.get('volume_types', [])
     for volume_type in volume_types:
@@ -30,8 +30,8 @@ def validate_volume_types(spec, dryrun, **_):
                 raise kopf.AdmissionError("Volume_Type extra_specs is invalid..")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.volume_types')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.volume_types')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.volume_types')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.volume_types')
 def seed_volume_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} volume_types'.format(name))
     if not config.is_dependency_successful(annotations):

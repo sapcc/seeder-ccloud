@@ -20,7 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.routers')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.routers')
 def validate(spec, dryrun, **_):
     routers = spec.get('routers', [])
     for router in routers:
@@ -28,8 +28,8 @@ def validate(spec, dryrun, **_):
             raise kopf.AdmissionError("Router must have a name...")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.routers')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.routers')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.routers')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.routers')
 def seed_routers_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} routers'.format(name))
     if not config.is_dependency_successful(annotations):

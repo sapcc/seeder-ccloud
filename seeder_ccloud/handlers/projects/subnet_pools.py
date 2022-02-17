@@ -20,7 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.subnet_pools')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
 def validate(spec, dryrun, **_):
     subnet_pools = spec.get('subnet_pools', [])
     for subnet_pool in subnet_pools:
@@ -29,8 +29,8 @@ def validate(spec, dryrun, **_):
         
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.subnet_pools')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.subnet_pools')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
 def seed_subnet_pools_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} subnet_pools'.format(name))
     if not config.is_dependency_successful(annotations):

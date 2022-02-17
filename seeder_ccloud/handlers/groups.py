@@ -21,8 +21,8 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.groups')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.groups')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.groups')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.groups')
 def seed_groups_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} groups'.format(name))
     if not config.is_dependency_successful(annotations):

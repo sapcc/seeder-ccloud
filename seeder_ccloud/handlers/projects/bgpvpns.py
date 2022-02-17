@@ -19,7 +19,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.bgpvpns')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.bgpvpns')
 def validate(spec, dryrun, **_):
     bgpvpns = spec.get('bgpvpns', [])
     for bgpvpn in bgpvpns:
@@ -34,8 +34,8 @@ def validate(spec, dryrun, **_):
 
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.bgpvpns')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.bgpvpns')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.bgpvpns')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.bgpvpns')
 def seed_bgpvpns_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} bgpvpns'.format(name))
     if not config.is_dependency_successful(annotations):

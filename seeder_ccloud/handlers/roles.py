@@ -21,7 +21,7 @@ from deepdiff import DeepDiff
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.roles')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
 def validate_roles(spec, dryrun, **_):
     roles = spec.get('roles', [])
     for role in roles:
@@ -29,8 +29,8 @@ def validate_roles(spec, dryrun, **_):
             raise kopf.AdmissionError("Roles must have a name if present..")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.roles')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.roles')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
 def seed_roles_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} roles'.format(name))
     if not config.is_dependency_successful(annotations):

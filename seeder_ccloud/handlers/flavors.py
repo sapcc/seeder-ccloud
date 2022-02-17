@@ -22,7 +22,7 @@ from novaclient import exceptions as novaexceptions
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.flavors')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.flavors')
 def validate_flavors(spec, dryrun, **_):
     flavors = spec.get('flavors', [])
     for flavor in flavors:
@@ -36,8 +36,8 @@ def validate_flavors(spec, dryrun, **_):
                 raise kopf.AdmissionError("extra_specs must be a valid dict if present.")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.flavors')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.flavors')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.flavors')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.flavors')
 def seed_flavors_handler(memo: kopf.Memo, new, old, spec, name, annotations, **_):
     logging.info('seeding {} flavor'.format(name))
     if not config.is_dependency_successful(annotations):

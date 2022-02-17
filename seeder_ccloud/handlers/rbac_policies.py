@@ -25,7 +25,7 @@ object_name_regex = r"^([^@]+)@([^@]+)@([^@]+)$"
 target_name_regex = r"^([^@]+)@([^@]+)$"
 
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.rbac_policies')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.rbac_policies')
 def validate_rbac_policies(spec, dryrun, **_):
     rbac_policies = spec.get('rbac_policies', [])
     for rbac_policy in rbac_policies:
@@ -46,8 +46,8 @@ def validate_rbac_policies(spec, dryrun, **_):
             raise kopf.AdmissionError("Rbac-Policy 'object_name' invalid value.")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.rbac_policies')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.rbac_policies')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.rbac_policies')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.rbac_policies')
 def seed_rbac_policies_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} rbac_policies'.format(name))
     if not config.is_dependency_successful(annotations):

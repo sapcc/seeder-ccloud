@@ -20,8 +20,8 @@ from seeder_ccloud import utils
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.billings')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.billings')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.billings')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.billings')
 def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} billings'.format(name))
     if not config.is_dependency_successful(annotations):

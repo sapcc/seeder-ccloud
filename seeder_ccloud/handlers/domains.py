@@ -23,7 +23,7 @@ from keystoneclient import exceptions
 config = utils.Config()
 
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.domains')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 def validate_domains(spec, dryrun, **_):
     domains = spec.get('domains', [])
     for domain in domains:
@@ -31,8 +31,8 @@ def validate_domains(spec, dryrun, **_):
             raise kopf.AdmissionError("Domains must have a name if present..")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.domains')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.domains')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} == > domains'.format(name))
     if not config.is_dependency_successful(annotations):

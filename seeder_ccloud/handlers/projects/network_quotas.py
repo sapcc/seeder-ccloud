@@ -20,8 +20,8 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.network_quotas')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.network_quotas')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.network_quotas')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.network_quotas')
 def seed_network_quotas_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} network_quotas'.format(name))
     if not config.is_dependency_successful(annotations):

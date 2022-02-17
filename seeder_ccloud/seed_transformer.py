@@ -33,6 +33,9 @@ def transform(patch, spec):
     role_assignments = []
     users = []
     project_seed_types = {}
+    if 'openstack' not in patch.spec:
+        patch.spec['openstack'] = {}
+
     for domain in spec['domains']:
         _groups = domain.pop('groups', [])
         _projects = domain.pop('projects', [])
@@ -64,18 +67,18 @@ def transform(patch, spec):
     if spec['domains']:
         new_domains = [x for x in spec['domains'] if len(x.keys()) > 1 or not x.keys() >= {'name'}]
         if new_domains:
-            patch.spec['domains'] = new_domains
+            patch.spec['openstack']['domains'] = new_domains
     if projects:
         new_projects = [x for x in projects if len(x.keys()) > 2 or not x.keys() >= {'name', 'domain'}]
         if new_projects:
-            patch.spec['projects'] = new_projects
+            patch.spec['openstack']['projects'] = new_projects
     if groups:
-        patch.spec['groups'] = groups
+        patch.spec['openstack']['groups'] = groups
     if role_assignments:
-        patch.spec['role_assignments'] = role_assignments
+        patch.spec['openstack']['role_assignments'] = role_assignments
 
     if project_seed_types:
-        patch.spec.update(project_seed_types)
+        patch.spec['openstack'].update(project_seed_types)
 
 
 def mutate_project(project, project_seed_types):

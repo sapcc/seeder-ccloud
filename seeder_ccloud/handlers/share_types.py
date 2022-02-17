@@ -20,8 +20,8 @@ from seeder_ccloud import utils
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.share_types')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.share_types')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.share_types')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.share_types')
 def seed_share_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} share_types'.format(name))
     if not config.is_dependency_successful(annotations):

@@ -21,7 +21,7 @@ from deepdiff import DeepDiff
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.regions')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.regions')
 def validate_regions(spec, dryrun, **_):
     regions = spec.get('regions', [])
     for region in regions:
@@ -29,8 +29,8 @@ def validate_regions(spec, dryrun, **_):
             raise kopf.AdmissionError("Region must have an id if present..")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.regions')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.regions')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.regions')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.regions')
 def seed_regions_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} regions'.format(name))
     if not config.is_dependency_successful(annotations):

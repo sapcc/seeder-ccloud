@@ -22,8 +22,8 @@ from keystoneclient import exceptions
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.swifts')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.swifts')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.swifts')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.swifts')
 def seed_swifts_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} swift containers'.format(name))
     if not config.is_dependency_successful(annotations):

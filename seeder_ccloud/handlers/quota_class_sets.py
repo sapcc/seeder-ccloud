@@ -20,8 +20,8 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.quota_class_sets')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.quota_class_sets')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.quota_class_sets')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.quota_class_sets')
 def seed_quota_class_sets_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} quota_class_sets'.format(name))
     if not config.is_dependency_successful(annotations):

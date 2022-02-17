@@ -20,8 +20,8 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.project_endpoints')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.project_endpoints')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.project_endpoints')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.project_endpoints')
 def seed_endpoints_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} project_endpoints'.format(name))
     if not config.is_dependency_successful(annotations):

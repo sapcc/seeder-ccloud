@@ -20,7 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_assignments')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
 def validate_role_assignments(spec, dryrun, **_):
     role_assignments = spec.get('role_assignments', [])
     for assignment in role_assignments:
@@ -43,8 +43,8 @@ def validate_role_assignments(spec, dryrun, **_):
             raise kopf.AdmissionError("setting project and domain at the same time is not allowed")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_assignments')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.role_assignments')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
 def seed_role_assignments_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} role_assignments'.format(name))
     if not config.is_dependency_successful(annotations):

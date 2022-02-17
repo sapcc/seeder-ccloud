@@ -20,7 +20,7 @@ from subnet_pools import Subnet_Pools
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.address_scopes')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
 def validate(spec, dryrun, **_):
     address_scopes = spec.get('address_scopes', [])
     for address_scope in address_scopes:
@@ -33,8 +33,8 @@ def validate(spec, dryrun, **_):
         
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.address_scopes')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.address_scopes')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
 def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} address_scopes'.format(name))
     if not config.is_dependency_successful(annotations):

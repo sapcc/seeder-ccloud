@@ -22,7 +22,7 @@ from seeder_ccloud import seed_transformer
 
 config = utils.Config()
 
-@kopf.on.mutate(config.crd_info['plural'], annotations={'legacy': 'True', 'operatorVersion': config.operator_version}, field='spec.domains')
+@kopf.on.mutate(config.crd_info['plural'], annotations={'legacy': 'True', 'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 def mutate_domains(patch: kopf.Patch, spec, **kwargs):
     seed_transformer.transform(patch, spec)
      # make sure we do not mutate again!

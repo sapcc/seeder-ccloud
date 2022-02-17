@@ -20,7 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.networks')
+@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
 def validate(spec, dryrun, **_):
     networks = spec.get('networks', [])
     for network in networks:
@@ -32,8 +32,8 @@ def validate(spec, dryrun, **_):
                 raise kopf.AdmissionError("Tags size must not be > 60 if present..")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.networks')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.networks')
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
 def seed_networks_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.info('seeding {} networks'.format(name))
     if not config.is_dependency_successful(annotations):
