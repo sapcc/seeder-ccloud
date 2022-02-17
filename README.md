@@ -3,6 +3,7 @@
 Seed the following ccloud content with a kubernetes operator.
 - openstack
 
+## operator
 - introduces a new kubernetes CustomResourceDefinition **ccloudseeds**
     - **kubectl get ccloudseed** lists all deployed ccloud seeds
     - kubectl apply/delete can be used to maintain ccloud seed specs
