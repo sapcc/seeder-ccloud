@@ -31,6 +31,9 @@ spec:
         image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.image_tag }}"
         command:
           - seeder_ccloud
+        {{- if .Values.operator.dry_run }}
+          - --dry-run
+        {{- end }}
           - --log=DEBUG
           - --config-file=/etc/operator/config.ini
         volumeMounts:

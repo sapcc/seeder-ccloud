@@ -1,2 +1,5 @@
 image: ccloud-seeder
 image_tag: latest
+
+operator:
+  dry_run: true
