@@ -81,89 +81,90 @@ Example seed spec of a keystone seed to be deployed via helm:
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
     spec:
-      roles:
-      - name: admin
-        description: 'Keystone Administration'
-      - name: member
-        description: 'Keystone Member'
-      - name: reader
-        description: 'Keystone Read-Only'
-      - name: service
-        description: 'Keystone Service'
-    
-      role_inferences:
-      - prior_role: admin
-        implied_role: member
+      openstack:
+        roles:
+        - name: admin
+            description: 'Keystone Administration'
+        - name: member
+            description: 'Keystone Member'
+        - name: reader
+            description: 'Keystone Read-Only'
+        - name: service
+            description: 'Keystone Service'
         
-      regions:
-      - id: eu
-        description: 'Europe'
-      - id: staging
-        description: 'Staging'
-        parent_region_id: eu
-      - id: qa
-        description: 'QA'
-        parent_region_id: eu
-      - id: local
-        description: 'Local Development'
-    
-      services:
-      - name: keystone
-        type: identity
-        description: Openstack Identity
-        endpoints:
-        - region: local
-          interface: public
-          url: {{ .Value.keystoneUrl }}:5000/v3
-          enabled: true
-        - region: local
-          interface: admin
-          url: {{ .Value.keystoneUrl }}:35357/v3
-          enabled: true
-        - region: local
-          interface: internal
-          url: http://keystone.{{.Release.Namespace}}.svc.kubernetes.{{.Values.region}}.{{.Values.tld}}:5000/v3'
-          enabled: false
-    
-      domains:
-      - name: Default
-        id: default
-        description: Openstack Internal Domain
-        enabled: true
-      
-      users:
-      - name: admin
-        description: Openstack Cloud Administrator
-        enabled: true
-        password: secret123
-        role_assignments:
-        - domain: Default
-        role: admin
-        - project: admin
-        role: admin
-        - project: service
-        role: admin
-
-      groups:
-      - name: administrators
-        description: Administrators
-        role_assignments:
-        - domain: Default
-        role: admin
-        - project: admin
-        role: admin
-        - project: service
-        role: admin
+        role_inferences:
+        - prior_role: admin
+            implied_role: member
+            
+        regions:
+        - id: eu
+            description: 'Europe'
+        - id: staging
+            description: 'Staging'
+            parent_region_id: eu
+        - id: qa
+            description: 'QA'
+            parent_region_id: eu
+        - id: local
+            description: 'Local Development'
+        
+        services:
+        - name: keystone
+            type: identity
+            description: Openstack Identity
+            endpoints:
+            - region: local
+            interface: public
+            url: {{ .Value.keystoneUrl }}:5000/v3
+            enabled: true
+            - region: local
+            interface: admin
+            url: {{ .Value.keystoneUrl }}:35357/v3
+            enabled: true
+            - region: local
+            interface: internal
+            url: http://keystone.{{.Release.Namespace}}.svc.kubernetes.{{.Values.region}}.{{.Values.tld}}:5000/v3'
+            enabled: false
+        
+        domains:
+        - name: Default
+            id: default
+            description: Openstack Internal Domain
+            enabled: true
+        
         users:
-        - admin
-      - name: members
-        description: Members
-        role_assignments:
-        - domain: Default
-        role: member
-    
-      projects:
-      - name: admin
-        description: Administrator Project
-      - name: service
-        description: Services Project
+        - name: admin
+            description: Openstack Cloud Administrator
+            enabled: true
+            password: secret123
+            role_assignments:
+            - domain: Default
+            role: admin
+            - project: admin
+            role: admin
+            - project: service
+            role: admin
+
+        groups:
+        - name: administrators
+            description: Administrators
+            role_assignments:
+            - domain: Default
+            role: admin
+            - project: admin
+            role: admin
+            - project: service
+            role: admin
+            users:
+            - admin
+        - name: members
+            description: Members
+            role_assignments:
+            - domain: Default
+            role: member
+        
+        projects:
+        - name: admin
+            description: Administrator Project
+        - name: service
+            description: Services Project
