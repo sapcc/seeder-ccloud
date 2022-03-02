@@ -19,16 +19,27 @@ from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
 from keystoneclient import exceptions
+from typing import List
 
 config = utils.Config()
 
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
-def validate_domains(spec, dryrun, **_):
-    domains = spec.get('domains', [])
+def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
+    domains = spec['openstack'].get('domains', [])
     for domain in domains:
         if 'name' not in domain or not domain['name']:
             raise kopf.AdmissionError("Domains must have a name if present..")
+    
+    if dryrun and domains:
+        old_domains = None
+        if old is not None:
+            old_domains = old['spec']['openstack'].get('domains', None)
+        changed = utils.get_changed_seeds(old_domains, domains)
+        diffs = Domains(memo['args'], dryrun).seed(changed)
+        if diffs:
+            warnings.append({'domains': diffs})
+
 
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
@@ -53,16 +64,17 @@ class Domains():
 
    
     def seed(self, domains):
+        self.diffs = {}
         for domain in domains:
             self._seed_domain(domain)
+        return self.diffs
 
 
     def _seed_domain(self, domain):
         logging.debug('seeding domain {}'.format(domain['name']))
-
+        self.diffs[domain['name']] = []
         #get all changed sub_seeds
-        driver = domain.get('config', None)
-        ra = domain.get('role_assignments', [])
+        driver = domain.pop('config', None)
 
         # grab a keystone client
         keystone = self.openstack.get_keystoneclient()
@@ -70,16 +82,18 @@ class Domains():
 
         result = keystone.domains.list(name=domain['name'])
         if not result:
+            self.diffs[domain['name']].append('create')
             if not self.dry_run:
                 logging.debug("create domain '%s'" % domain['name'])
                 resource = keystone.domains.create(**domain)
         else:
             resource = result[0]
-            diff = DeepDiff(domain, resource.to_dict())
+            diff = DeepDiff(resource.to_dict(), domain)
             if 'values_changed' in diff:
-                if not self.dry_run:
-                    logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
-                    keystone.domains.update(resource.id, **domain)
+                self.diffs[domain['name']].append(diff['values_changed'])
+                logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
+            if not self.dry_run:
+                keystone.domains.update(resource.id, **domain)
 
         if driver:
             self._seed_domain_config(resource, driver)
@@ -88,18 +102,20 @@ class Domains():
     def _seed_domain_config(self, domain, driver):
         logging.debug(
             "seeding domain config %s %s" % (domain.name, self.openstack.redact(driver)))
-
+        self.diffs[domain.name + '_config'] = []
         keystone = self.openstack.get_keystoneclient()
         # get the current domain configuration
         try:
             result = keystone.domain_configs.get(domain)
-            diff = DeepDiff(driver, result.to_dict(), exclude_obj_callback=utils.diff_exclude_password_callback)
+            diff = DeepDiff(result.to_dict(), driver, exclude_obj_callback=utils.diff_exclude_password_callback)
             if 'values_changed' in diff:
+                self.diffs[domain['name']+'_config'].append(diff['values_changed'])
                 logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
             if not self.dry_run:
                 keystone.domain_configs.update(domain, driver)
         except exceptions.NotFound:
-             if not self.dry_run:
+            self.diffs[domain.name + '_config'].append('create')
+            if not self.dry_run:
                 logging.debug('creating domain config %s' % domain.name)
                 keystone.domain_configs.create(domain, driver)
         except Exception as e:

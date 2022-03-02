@@ -14,15 +14,16 @@
  limitations under the License.
 """
 import logging, kopf
-from keystoneclient import exceptions
+from typing import List
 from seeder_ccloud import utils
+from deepdiff import DeepDiff
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
-def validate(spec, dryrun, **_):
-    networks = spec.get('networks', [])
+def validate(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
+    networks = spec['openstack'].get('networks', [])
     for network in networks:
         if 'name' not in networks or not networks['name']:
             raise kopf.AdmissionError("Network must have a name if present..")
@@ -30,6 +31,20 @@ def validate(spec, dryrun, **_):
         for tag in tags:
             if not tag or len(tag) > 60:
                 raise kopf.AdmissionError("Tags size must not be > 60 if present..")
+        subnets = subnets.get('subnets', [])
+        for subnet in subnets:
+            if 'name' not in subnet or not subnet['name']:
+                raise kopf.AdmissionError("Subnet must have a name if present..")
+
+
+    if dryrun and networks:
+        old_domains = None
+        if old is not None:
+            old_domains = old['spec']['openstack'].get('domains', None)
+        changed = utils.get_changed_seeds(old_domains, networks)
+        diffs = Networks(memo['args'], dryrun).seed(changed)
+        if diffs:
+            warnings.append({'networks': diffs})
 
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
@@ -52,8 +67,10 @@ class Networks():
 
 
     def seed(self, networks):
+        self.diffs = {}
         for network in networks:
             self._seed_network(network)
+        return self.diffs
 
 
     def _seed_network(self, network):
@@ -93,6 +110,7 @@ class Networks():
         query = {'tenant_id': project_id, 'name': network['name']}
         result = neutron.list_networks(retrieve_all=True, **query)
         if not result or not result['networks']:
+            self.diffs[network['name']].append('create')
             logging.info(
                 "create network '%s/%s'" % (
                     project_name, network['name']))
@@ -101,16 +119,14 @@ class Networks():
                 resource = result['network']
         else:
             resource = result['networks'][0]
-            for attr in list(network.keys()):
-                if network[attr] != resource.get(attr, ''):
-                    logging.info(
-                        "%s differs. update network'%s/%s'" % (
-                            attr, project_name, network['name']))
-                    # drop read-only attributes
-                    body['network'].pop('tenant_id', None)
-                    if not self.dry_run:
-                        neutron.update_network(resource['id'], body)
-                    break
+            diff = DeepDiff(resource.to_dict(), network)
+            if 'values_changed' in diff:
+                self.diffs[network['name']].append(diff['values_changed'])
+                logging.debug("network %s differs: '%s'" % (network['name'], diff))
+            
+                body['network'].pop('tenant_id', None)
+                if not self.dry_run:
+                    neutron.update_network(resource['id'], body)
 
         if tags:
             self._seed_network_tags(resource, tags)
@@ -136,6 +152,7 @@ class Networks():
 
             for tag in tags:
                 if tag not in network['tags']:
+                    self.diffs[network['name']].append('create tag: {}'.format(tag))
                     logging.info(
                         "adding tag %s to network '%s'" % (
                             tag, network['name']))
@@ -177,12 +194,6 @@ class Networks():
                 'gateway_ip', 'cidr', 'prefixlen', 'subnetpool_id',
                 'description'))
 
-            if 'name' not in subnet or not subnet['name']:
-                logging.warn(
-                    "skipping subnet '%s/%s', since it is misconfigured" % (
-                        network['name'], subnet))
-                continue
-
             if 'gateway_ip' in subnet and subnet['gateway_ip'] == 'null':
                 subnet['gateway_ip'] = None
 
@@ -193,6 +204,7 @@ class Networks():
             query = {'network_id': network['id'], 'name': subnet['name']}
             result = neutron.list_subnets(retrieve_all=True, **query)
             if not result or not result['subnets']:
+                self.diffs[network['name']].append('create subnet: {}'.format(subnet['name']))
                 logging.info(
                     "create subnet '%s/%s'" % (
                         network['name'], subnet['name']))
@@ -200,11 +212,11 @@ class Networks():
                     neutron.create_subnet(body)
             else:
                 resource = result['subnets'][0]
-                for attr in list(subnet.keys()):
-                    if subnet[attr] != resource.get(attr, ''):
-                        logging.info(
-                            "%s differs. update subnet'%s/%s'" % (
-                                attr, network['name'], subnet['name']))
+                diff = DeepDiff(resource.to_dict(), subnet)
+                if 'values_changed' in diff:
+                    self.diffs[network['name']+'_'+subnet['name']].append(diff['values_changed'])
+                    logging.debug("network %s subnet % differs: '%s'" % (network['name'], subnet['name'], diff))
+                    if not self.dry_run:
                         # drop read-only attributes
                         body['subnet'].pop('cidr', None)
                         body['subnet'].pop('segment_id', None)
@@ -213,6 +225,4 @@ class Networks():
                         body['subnet'].pop('subnetpool_id', None)
                         body['subnet'].pop('ip_version', None)
                         body['subnet'].pop('prefixlen', None)
-                        if not self.dry_run:
-                            neutron.update_subnet(resource['id'], body)
-                        break
+                        neutron.update_subnet(resource['id'], body)
