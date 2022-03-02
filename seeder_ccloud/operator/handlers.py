@@ -15,7 +15,7 @@ class Handlers():
         
         @kopf.on.create(self.config.crd_info['plural'], annotations={'operatorVersion': self.config.operator_version})
         @kopf.on.update(self.config.crd_info['plural'], annotations={'operatorVersion': self.config.operator_version})
-        def check_dependencies(spec, new, name, namespace, **kwargs):
+        def check_dependencies(spec, name, namespace, **kwargs):
             requires = spec.get('requires', None)
             logging.info('checking dependencies for seed {}'.format(name))
             if not requires:
@@ -29,13 +29,15 @@ class Handlers():
             except Exception as error:
                 raise kopf.TemporaryError('{}'.format(error), delay=30)
 
-        import seeder_ccloud.operator.crd_legacy_mutate
-        import seeder_ccloud.handlers.regions
+        
+        #import seeder_ccloud.handlers.regions
         import seeder_ccloud.handlers.domains
-        import seeder_ccloud.handlers.flavors
-        import seeder_ccloud.handlers.groups
-        import seeder_ccloud.handlers.role_assignments
-        import seeder_ccloud.handlers.projects.projects
+        import seeder_ccloud.handlers.projects.networks
+        import seeder_ccloud.handlers.projects.subnet_pools
+        #import seeder_ccloud.handlers.flavors
+        #import seeder_ccloud.handlers.groups
+        #import seeder_ccloud.handlers.role_assignments
+        #import seeder_ccloud.handlers.projects.projects
 
 
     def has_dependency_cycle(self, k8s_client, seed_name, namespace, requires):

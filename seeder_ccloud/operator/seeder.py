@@ -24,9 +24,10 @@ from seeder_ccloud.operator.handlers import Handlers
 
 config = utils.Config()
 operator_storage = kopf.AnnotationsDiffBaseStorage(
-    prefix=config.prefix,
-    key='last-handled-configuration',
+    prefix='seeder.ccloud',
+    key='last-applied-configuration',
 )
+
 
 @kopf.on.startup()
 def startup(settings: kopf.OperatorSettings, **kwargs):
@@ -35,16 +36,16 @@ def startup(settings: kopf.OperatorSettings, **kwargs):
     try:
         k8s_config.load_kube_config()
         settings.admission.server = kopf.WebhookNgrokTunnel(port=88)
-        settings.admission.server.insecure = True
-        settings.admission.managed = 'seeder.cloud.sap'
+        settings.admission.server = kopf.WebhookServer(addr='0.0.0.0', port=80, insecure=True)
+        settings.admission.server.insecure = False
+        #settings.admission.managed = 'seeder.cloud.sap'
+        #settings.admission.server.host = 'seeder-ccloud.qa-de-1.cloud.sap'
     except k8s_config.ConfigException:
         k8s_config.load_incluster_config()
         settings.admission.server = kopf.WebhookServer(addr='0.0.0.0', port=80, insecure=True)
-        #settings.admission.server.host = 'https://seeder-ccloud.qa-de-1.cloud.sap'
 
     logging.info('starting operator with {} workers and crd {}'.format(int(args.max_workers), config.crd_info))
     settings.execution.max_workers = int(args.max_workers)
-    #settings.admission.managed = 'seeder.cloud.sap'
     settings.persistence.diffbase_storage = operator_storage
     settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=config.prefix)
 
@@ -69,8 +70,7 @@ def main():
     if args.namespaces:
         clusterwide = False
 
-    h = Handlers(operator_storage)
-    h.setup()
+    Handlers(operator_storage).setup()
 
     asyncio.run(kopf.operator(
         memo=memo, 
