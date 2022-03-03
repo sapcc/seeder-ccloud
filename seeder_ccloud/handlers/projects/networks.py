@@ -38,10 +38,10 @@ def validate(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
 
 
     if dryrun and networks:
-        old_domains = None
+        old_networks = None
         if old is not None:
-            old_domains = old['spec']['openstack'].get('domains', None)
-        changed = utils.get_changed_seeds(old_domains, networks)
+            old_networks = old['spec']['openstack'].get('networks', None)
+        changed = utils.get_changed_seeds(old_networks, networks)
         diffs = Networks(memo['args'], dryrun).seed(changed)
         if diffs:
             warnings.append({'networks': diffs})
@@ -104,6 +104,7 @@ class Networks():
             'provider:segmentation_id', 'qos_policy_id',
             'router:external',
             'shared', 'vlan_transparent', 'description'))
+        self.diffs[network['name']] = []
 
         body = {'network': network.copy()}
         body['network']['tenant_id'] = project_id
@@ -203,8 +204,9 @@ class Networks():
 
             query = {'network_id': network['id'], 'name': subnet['name']}
             result = neutron.list_subnets(retrieve_all=True, **query)
+            self.diffs[network['name'] + '_subnet'] = []
             if not result or not result['subnets']:
-                self.diffs[network['name']].append('create subnet: {}'.format(subnet['name']))
+                self.diffs[network['name'] + '_subnet'].append('create subnet: {}'.format(subnet['name']))
                 logging.info(
                     "create subnet '%s/%s'" % (
                         network['name'], subnet['name']))
@@ -214,7 +216,7 @@ class Networks():
                 resource = result['subnets'][0]
                 diff = DeepDiff(resource.to_dict(), subnet)
                 if 'values_changed' in diff:
-                    self.diffs[network['name']+'_'+subnet['name']].append(diff['values_changed'])
+                    self.diffs[network['name'] + '_subnet'].append(diff['values_changed'])
                     logging.debug("network %s subnet % differs: '%s'" % (network['name'], subnet['name'], diff))
                     if not self.dry_run:
                         # drop read-only attributes
