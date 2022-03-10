@@ -89,8 +89,6 @@ class Networks():
         logging.debug("seeding networks of project %s" % project_name)
 
         neutron = self.openstack.get_neutronclient()
-        logging.debug("------------------------------------------")
-        logging.info(type(neutron).__name__)
         subnets = network.pop('subnets', None)
         tags = network.pop('tags', None)
 
@@ -110,19 +108,18 @@ class Networks():
         body = {'network': network.copy()}
         body['network']['tenant_id'] = project_id
         query = {'tenant_id': project_id, 'name': network['name']}
-        logging.info(neutron.list_networks)
         result = neutron.list_networks(retrieve_all=True, **query)
         if not result or not result['networks']:
             self.diffs[network['name']].append('create')
             logging.info(
                 "create network '%s/%s'" % (
                     project_name, network['name']))
-            result = neutron.create_network(body)
             if not self.dry_run:
+                result = neutron.create_network(body)
                 resource = result['network']
         else:
             resource = result['networks'][0]
-            diff = DeepDiff(resource.to_dict(), network)
+            diff = DeepDiff(resource, network)
             if 'values_changed' in diff:
                 self.diffs[network['name']].append(diff['values_changed'])
                 logging.debug("network %s differs: '%s'" % (network['name'], diff))
@@ -216,7 +213,7 @@ class Networks():
                     neutron.create_subnet(body)
             else:
                 resource = result['subnets'][0]
-                diff = DeepDiff(resource.to_dict(), subnet)
+                diff = DeepDiff(resource, subnet)
                 if 'values_changed' in diff:
                     self.diffs[network['name'] + '_subnet'].append(diff['values_changed'])
                     logging.debug("network %s subnet % differs: '%s'" % (network['name'], subnet['name'], diff))
