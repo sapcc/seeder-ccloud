@@ -128,10 +128,10 @@ class Networks():
                 if not self.dry_run:
                     neutron.update_network(resource['id'], body)
 
-        if tags:
+        if tags and resource:
             self._seed_network_tags(resource, tags)
 
-        if subnets:
+        if subnets and resource:
             self._seed_network_subnets(resource, subnets)
 
 
