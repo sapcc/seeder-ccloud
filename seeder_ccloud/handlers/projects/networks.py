@@ -178,14 +178,16 @@ class Networks():
         for subnet in subnets:
             # lookup subnetpool-id
             if 'subnetpool' in subnet:
-                subnet['subnetpool_id'] = self.openstack.get_subnetpool_id(
-                    network['tenant_id'],
-                    subnet['subnetpool'])
-                if not subnet['subnetpool_id']:
+                try:
+                    subnet['subnetpool_id'] = self.openstack.get_subnetpool_id(
+                        network['tenant_id'],
+                        subnet['subnetpool'])
+                except Exception:
                     logging.warn(
                         "skipping subnet '%s/%s', since its subnetpool is invalid" % (
                             network['name'], subnet))
                     continue
+                
                 subnet.pop('subnetpool', None)
 
             subnet = self.openstack.sanitize(subnet, (
