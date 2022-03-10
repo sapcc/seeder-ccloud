@@ -104,7 +104,7 @@ class Networks():
             'router:external',
             'shared', 'vlan_transparent', 'description'))
         self.diffs[network['name']] = []
-
+        resource = None
         body = {'network': network.copy()}
         body['network']['tenant_id'] = project_id
         query = {'tenant_id': project_id, 'name': network['name']}
