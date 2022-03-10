@@ -22,7 +22,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 config = utils.Config()
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
-def validate(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
+def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
     networks = spec['openstack'].get('networks', [])
     for network in networks:
         if 'name' not in networks or not networks['name']:
