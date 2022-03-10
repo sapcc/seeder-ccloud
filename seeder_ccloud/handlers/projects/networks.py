@@ -31,7 +31,7 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], *
         for tag in tags:
             if not tag or len(tag) > 60:
                 raise kopf.AdmissionError("Tags size must not be > 60 if present..")
-        subnets = subnets.get('subnets', [])
+        subnets = network.get('subnets', [])
         for subnet in subnets:
             if 'name' not in subnet or not subnet['name']:
                 raise kopf.AdmissionError("Subnet must have a name if present..")
