@@ -2,6 +2,15 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: seeder.cloud.sap
+  namespace: monsoon3
+  annotations:
+    meta.helm.sh/release-name: ccloud-seeder
+    meta.helm.sh/release-namespace: monsoon3
+  labels:
+    app: ccloud-seeder
+    app.kubernetes.io/managed-by: Helm
+    chart: ccloud-seeder-0.0.1
+    release: ccloud-seeder
 webhooks:
 - admissionReviewVersions:
   - v1
