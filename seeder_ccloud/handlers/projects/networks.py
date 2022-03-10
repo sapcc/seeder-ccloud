@@ -25,7 +25,7 @@ config = utils.Config()
 def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
     networks = spec['openstack'].get('networks', [])
     for network in networks:
-        if 'name' not in networks or not networks['name']:
+        if 'name' not in network or not network['name']:
             raise kopf.AdmissionError("Network must have a name if present..")
         tags = network.get('tags', [])
         for tag in tags:
@@ -35,7 +35,6 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], *
         for subnet in subnets:
             if 'name' not in subnet or not subnet['name']:
                 raise kopf.AdmissionError("Subnet must have a name if present..")
-
 
     if dryrun and networks:
         old_networks = None
