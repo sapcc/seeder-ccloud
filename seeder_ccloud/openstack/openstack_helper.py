@@ -154,7 +154,7 @@ class OpenstackHelper:
     def get_subnetpool_id(self, project_id, name):
         """ get a (cached) subnetpool-id for a project-id and subnetpool name """
         query = {'tenant_id': project_id, 'name': name}
-        result = self.neutron.list_subnetpools(retrieve_all=True, **query)
+        result = self.get_neutronclient().list_subnetpools(retrieve_all=True, **query)
         if result and result['subnetpools']:
             return result['subnetpools'][0]['id']
         else:
@@ -165,7 +165,7 @@ class OpenstackHelper:
     def get_network_id(self, project_id, name):
         """ get a (cached) network-id for a project-id and network name """
         query = {'tenant_id': project_id, 'name': name}
-        result = self.neutron.list_networks(retrieve_all=True, **query)
+        result = self.get_neutronclient().list_networks(retrieve_all=True, **query)
         if result and result['networks']:
             return result['networks'][0]['id']     
         else:
@@ -176,7 +176,7 @@ class OpenstackHelper:
     def get_subnet_id(self, project_id, name):
         """ get a (cached) subnet-id for a project-id and subnet name """
         query = {'tenant_id': project_id, 'name': name}
-        result = self.neutron.list_subnets(retrieve_all=True, **query)
+        result = self.get_neutronclient().list_subnets(retrieve_all=True, **query)
         if result and result['subnets']:
             return result['subnets'][0]['id']
         else:

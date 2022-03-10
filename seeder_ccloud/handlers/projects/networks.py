@@ -89,6 +89,8 @@ class Networks():
         logging.debug("seeding networks of project %s" % project_name)
 
         neutron = self.openstack.get_neutronclient()
+        logging.debug("------------------------------------------")
+        logging.info(type(neutron).__name__)
         subnets = network.pop('subnets', None)
         tags = network.pop('tags', None)
 
@@ -108,6 +110,7 @@ class Networks():
         body = {'network': network.copy()}
         body['network']['tenant_id'] = project_id
         query = {'tenant_id': project_id, 'name': network['name']}
+        logging.info(neutron.list_networks)
         result = neutron.list_networks(retrieve_all=True, **query)
         if not result or not result['networks']:
             self.diffs[network['name']].append('create')
