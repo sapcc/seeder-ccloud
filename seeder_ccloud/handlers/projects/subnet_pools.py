@@ -14,32 +14,44 @@
  limitations under the License.
 """
 import logging, kopf
-from designateclient.v2 import client as designateclient
+from typing import List
 from seeder_ccloud import utils
+from deepdiff import DeepDiff
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
-def validate(spec, dryrun, **_):
+def validate(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
     subnet_pools = spec.get('subnet_pools', [])
     for subnet_pool in subnet_pools:
         if 'name' not in subnet_pool or not subnet_pool['name']:
             raise kopf.AdmissionError("subnet_pool must have a name...")
-        
+
+    if dryrun and subnet_pools:
+        old_subnet_pools = None
+        if old is not None:
+            old_subnet_pools = old['spec']['openstack'].get('networks', None)
+        try:
+            changed = utils.get_changed_seeds(old_subnet_pools, subnet_pools)
+            diffs = Subnet_Pools(memo['args'], dryrun).seed(changed)
+            if diffs:
+                warnings.append({'subnet_pools': diffs})
+        except Exception as error:
+            raise kopf.AdmissionError(error)     
 
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
 def seed_subnet_pools_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-    logging.info('seeding {} subnet_pools'.format(name))
+    logging.debug(f"seeding {name} subnet_pools")
     if not config.is_dependency_successful(annotations):
-        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+        raise kopf.TemporaryError(f"error seeding {name}: dependencies error", delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
         Subnet_Pools(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
-        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+        raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
 
 
 class Subnet_Pools():
@@ -49,71 +61,54 @@ class Subnet_Pools():
 
 
     def seed(self, subnet_pools):
+        self.diffs = {}
         for subnet_pool in subnet_pools:
             self._seed_subnet_pool(subnet_pool)
+        return self.diffs
 
 
     def _seed_subnet_pool(self, subnet_pool):
         project_name = subnet_pool['project']
         project_id = self.openstack.get_project_id(subnet_pool['domain'], project_name)
-        logging.debug(
-            "seeding subnet-pools of project %s" % project_name)
+        logging.debug(f"seeding subnet-pool {subnet_pool['name']} of project {project_name}")
 
         neutron = self.openstack.get_neutronclient()
-        try:
-            subnet_pool = self.openstack.sanitize(subnet_pool, (
-                'name', 'default_quota', 'prefixes', 'min_prefixlen',
-                'shared',
-                'default_prefixlen', 'max_prefixlen', 'description',
-                'address_scope_id', 'is_default'))
+        subnet_pool = self.openstack.sanitize(subnet_pool, (
+            'name', 'default_quota', 'prefixes', 'min_prefixlen',
+            'shared',
+            'default_prefixlen', 'max_prefixlen', 'description',
+            'address_scope_id', 'is_default'))
 
-            body = {'subnetpool': subnet_pool.copy()}
-            body['subnetpool']['tenant_id'] = project_id
+        body = {'subnetpool': subnet_pool.copy()}
+        body['subnetpool']['tenant_id'] = project_id
 
-            query = {'tenant_id': project_id,
-                    'name': subnet_pool['name']}
-            result = neutron.list_subnetpools(retrieve_all=True,
-                                            **query)
-            if not result or not result['subnetpools']:
-                logging.info(
-                    "create subnet-pool '%s/%s'" % (
-                        project_name, subnet_pool['name']))
+        query = {'tenant_id': project_id,
+                'name': subnet_pool['name']}
+        result = neutron.list_subnetpools(retrieve_all=True,
+                                        **query)
+        self.diffs[subnet_pool['name']] = []
+        if not result or not result['subnetpools']:
+            logging.info(f"create subnet-pool {project_name}/{subnet_pool['name']}")
+            self.diffs[subnet_pool['name']].append('create')
+            if not self.dry_run:
+                result = neutron.create_subnetpool(body)
+        else:
+            resource = result['subnetpools'][0]
+            diff = DeepDiff(resource.get('prefixes', []), subnet_pool.get('prefixes', []))
+            if 'values_changed' in diff:
+                self.diffs[subnet_pool['name']].append(diff['values_changed'])
+                logging.info(f"network {subnet_pool['name']} differs: {diff}")
+
+            for attr in list(subnet_pool.keys()):
+                if attr != 'prefixes':
+                    # a hacky comparison due to the neutron api not dealing with string/int attributes consistently
+                    if str(subnet_pool[attr]) != str(resource.get(attr, '')):
+                        logging.info(f"subnet_pool {subnet_pool['name']} differs: {attr}")
+                        self.diffs[subnet_pool['name']].append(f"value_changed: {attr}")
+
+            if self.diffs[subnet_pool['name']]:
                 if not self.dry_run:
-                    result = neutron.create_subnetpool(body)
-            else:
-                resource = result['subnetpools'][0]
-                for attr in list(subnet_pool.keys()):
-                    if attr == 'prefixes':
-                        for prefix in subnet_pool['prefixes']:
-                            if prefix not in resource.get('prefixes',
-                                                        []):
-                                logging.info(
-                                    "update subnet-pool prefixes '%s/%s'" % (
-                                        project_name,
-                                        subnet_pool['name']))
-                                # drop read-only attributes
-                                body['subnetpool'].pop('tenant_id',
-                                                    None)
-                                body['subnetpool'].pop('shared', None)
-                                if not self.dry_run:
-                                    neutron.update_subnetpool(resource['id'], body)
-                                break
-                    else:
-                        # a hacky comparison due to the neutron api not dealing with string/int attributes consistently
-                        if str(subnet_pool[attr]) != str(
-                                resource.get(attr, '')):
-                            logging.info(
-                                "%s differs. update subnet-pool'%s/%s'" % (
-                                    attr, project_name,
-                                    subnet_pool['name']))
-                            # drop read-only attributes
-                            body['subnetpool'].pop('tenant_id', None)
-                            body['subnetpool'].pop('shared', None)
-                            if not self.dry_run:
-                                neutron.update_subnetpool(resource['id'],
-                                                        body)
-                            break
-        except Exception as e:
-            logging.error("could not seed subnet pool %s/%s: %s" % (
-                project_name, subnet_pool['name'], e))
-            raise
+                    # drop read-only attributes
+                    body['subnetpool'].pop('tenant_id', None)
+                    body['subnetpool'].pop('shared', None)
+                    neutron.update_subnetpool(resource['id'], body)
