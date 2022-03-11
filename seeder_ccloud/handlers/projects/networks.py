@@ -40,23 +40,26 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], *
         old_networks = None
         if old is not None:
             old_networks = old['spec']['openstack'].get('networks', None)
-        changed = utils.get_changed_seeds(old_networks, networks)
-        diffs = Networks(memo['args'], dryrun).seed(changed)
-        if diffs:
-            warnings.append({'networks': diffs})
+        try:
+            changed = utils.get_changed_seeds(old_networks, networks)
+            diffs = Networks(memo['args'], dryrun).seed(changed)
+            if diffs:
+                warnings.append({'networks': diffs})
+        except Exception as error:
+            raise kopf.AdmissionError(error)
 
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
 def seed_networks_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-    logging.info('seeding {} networks'.format(name))
+    logging.debug(f"seeding {name} networks")
     if not config.is_dependency_successful(annotations):
-        raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+        raise kopf.TemporaryError(f"error seeding seed {name}: dependency error", delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
         Networks(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
-        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+        raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
 
 
 class Networks():
@@ -86,7 +89,7 @@ class Networks():
                 'provider_physical_network': 'provider:physical_network',
                 'provider_segmentation_id': 'provider:segmentation_id'}
 
-        logging.debug("seeding networks of project %s" % project_name)
+        logging.debug(f"seeding network {network['name']} / project {project_name}")
 
         neutron = self.openstack.get_neutronclient()
         subnets = network.pop('subnets', None)
@@ -111,9 +114,8 @@ class Networks():
         result = neutron.list_networks(retrieve_all=True, **query)
         if not result or not result['networks']:
             self.diffs[network['name']].append('create')
-            logging.info(
-                "create network '%s/%s'" % (
-                    project_name, network['name']))
+            logging.debug(
+                f"create network {project_name}/{network['name']}")
             if not self.dry_run:
                 result = neutron.create_network(body)
                 resource = result['network']
@@ -122,7 +124,7 @@ class Networks():
             diff = DeepDiff(resource, network)
             if 'values_changed' in diff:
                 self.diffs[network['name']].append(diff['values_changed'])
-                logging.debug("network %s differs: '%s'" % (network['name'], diff))
+                logging.debug(f"network {network['name']} differs: {diff}")
             
                 body['network'].pop('tenant_id', None)
                 if not self.dry_run:
@@ -145,17 +147,15 @@ class Networks():
             :return:
             """
 
-            logging.debug("seeding tags of network %s" % network['name'])
+            logging.debug(f"seeding tags of network {network['name']}")
 
             # grab a neutron client
             neutron = self.openstack.get_neutronclient()
 
             for tag in tags:
                 if tag not in network['tags']:
-                    self.diffs[network['name']].append('create tag: {}'.format(tag))
-                    logging.info(
-                        "adding tag %s to network '%s'" % (
-                            tag, network['name']))
+                    self.diffs[network['name']].append(f"create tag: {tag}")
+                    logging.debug(f"adding tag {tag} to network {network['name']}")
                     if not self.dry_run:
                         neutron.add_tag('networks', network['id'], tag)
 
@@ -170,7 +170,7 @@ class Networks():
         :return:
         """
 
-        logging.debug("seeding subnets of network %s" % network['name'])
+        logging.debug(f"seeding subnets of network {network['name']}")
 
         # grab a neutron client
         neutron = self.openstack.get_neutronclient()
@@ -183,10 +183,7 @@ class Networks():
                         network['tenant_id'],
                         subnet['subnetpool'])
                 except Exception:
-                    logging.warn(
-                        "skipping subnet '%s/%s', since its subnetpool is invalid" % (
-                            network['name'], subnet))
-                    continue
+                    raise Exception(f"subnet {network['name']}/{subnet}: invalid subnetpool")
                 
                 subnet.pop('subnetpool', None)
 
@@ -207,10 +204,8 @@ class Networks():
             result = neutron.list_subnets(retrieve_all=True, **query)
             self.diffs[network['name'] + '_subnet'] = []
             if not result or not result['subnets']:
-                self.diffs[network['name'] + '_subnet'].append('create subnet: {}'.format(subnet['name']))
-                logging.info(
-                    "create subnet '%s/%s'" % (
-                        network['name'], subnet['name']))
+                self.diffs[network['name'] + '_subnet'].append(f"create subnet: {subnet['name']}")
+                logging.debug(f"create subnet {network['name']}/{subnet['name']}")
                 if not self.dry_run:
                     neutron.create_subnet(body)
             else:
@@ -218,7 +213,7 @@ class Networks():
                 diff = DeepDiff(resource, subnet)
                 if 'values_changed' in diff:
                     self.diffs[network['name'] + '_subnet'].append(diff['values_changed'])
-                    logging.debug("network %s subnet % differs: '%s'" % (network['name'], subnet['name'], diff))
+                    logging.debug(f"network {network['name']} subnet {subnet['name']} differs: {diff}")
                     if not self.dry_run:
                         # drop read-only attributes
                         body['subnet'].pop('cidr', None)
