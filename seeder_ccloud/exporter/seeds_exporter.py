@@ -23,7 +23,7 @@ class SeedsCollector(object):
     def __init__(self):
         self.storage = kopf.AnnotationsDiffBaseStorage(
             prefix=config.prefix,
-            key='last-handled-configuration',
+            key='last-applied-configuration',
         )
 
     def describe(self):
@@ -47,11 +47,11 @@ class SeedsCollector(object):
             try:
                 body = bodies.Body(seed)
                 meta = bodies.Meta(seed)
-                lastHandeld = self.storage.fetch(body=body)
-                if lastHandeld is None:
+                lastApplied = self.storage.fetch(body=body)
+                if lastApplied is None:
                     status.add_metric(labels=[meta.name], value=0.0)
                     continue
-                if lastHandeld['spec'] != seed['spec']:
+                if lastApplied['spec'] != seed['spec']:
                     status.add_metric(labels=[meta.name], value=0.0)
                 else:
                     status.add_metric(labels=[meta.name], value=1.0)
