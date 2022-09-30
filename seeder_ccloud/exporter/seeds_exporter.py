@@ -43,13 +43,14 @@ class SeedsCollector(object):
         yield total
 
         for seed in seeds['items']:
+            meta = None
             try:
                 body = bodies.Body(seed)
+                meta = bodies.Meta(seed)
                 lastHandeld = self.storage.fetch(body=body)
                 if lastHandeld is None:
                     status.add_metric(labels=[meta.name], value=0.0)
                     continue
-                meta = bodies.Meta(seed)
                 if lastHandeld['spec'] != seed['spec']:
                     status.add_metric(labels=[meta.name], value=0.0)
                 else:
