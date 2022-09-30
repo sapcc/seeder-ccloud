@@ -38,7 +38,7 @@ class Config:
             cls.args = cls.get_args(cls)
             config.read(cls.args.config_file)
             
-            cls.prefix = 'seeder.ccloud.cloud.sap'
+            cls.prefix = 'seeder.ccloud'
             cls.operator_version = config.get('operator', 'version')
             cls.crd_info = {
                 'version': config.get('crd_names', 'version'),

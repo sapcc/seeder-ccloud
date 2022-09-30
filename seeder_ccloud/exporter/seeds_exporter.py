@@ -56,7 +56,8 @@ class SeedsCollector(object):
                     status.add_metric(labels=[meta.name], value=1.0)
             except Exception as e:
                 logging.error(e)
-                status.add_metric(labels=[meta.name], value=0.0)
+                if meta is not None:
+                    status.add_metric(labels=[meta.name], value=0.0)
         yield status
 
 
