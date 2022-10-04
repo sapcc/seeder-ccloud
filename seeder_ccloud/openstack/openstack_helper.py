@@ -123,7 +123,7 @@ class OpenstackHelper:
         if projects:
             return projects[0].id
         else:
-            raise Exception("project %s/%s not found".format(domain, name))
+            raise Exception("project {0}/{1} not found".format(domain, name))
 
 
     @cachedmethod(operator.attrgetter('id_cache'), partial(hashkey, 'user'))
@@ -135,7 +135,7 @@ class OpenstackHelper:
         if users:
             return users[0].id
         else:
-            raise Exception("user %s/%s not found".format(domain, name))
+            raise Exception("user {0}/{1} not found".format(domain, name))
 
 
     @cachedmethod(operator.attrgetter('id_cache'), partial(hashkey, 'group'))
@@ -147,7 +147,7 @@ class OpenstackHelper:
         if groups:
            return groups[0].id
         else:
-           raise Exception("group %s/%s not found".format(domain, name))
+           raise Exception("group {0}/{1} not found".format(domain, name))
 
 
     @cachedmethod(operator.attrgetter('id_cache'), partial(hashkey, 'subnetpool'))
@@ -158,7 +158,7 @@ class OpenstackHelper:
         if result and result['subnetpools']:
             return result['subnetpools'][0]['id']
         else:
-            raise Exception("subnetpool %s/%s not found".format(project_id, name))
+            raise Exception("subnetpool {0}/{1} not found".format(project_id, name))
 
 
     @cachedmethod(operator.attrgetter('id_cache'), partial(hashkey, 'network'))
@@ -169,7 +169,7 @@ class OpenstackHelper:
         if result and result['networks']:
             return result['networks'][0]['id']     
         else:
-            raise Exception("network %s/%s not found".format(project_id, name))
+            raise Exception("network {0}/{1} not found".format(project_id, name))
 
 
     @cachedmethod(operator.attrgetter('id_cache'), partial(hashkey, 'subnet'))
@@ -180,7 +180,7 @@ class OpenstackHelper:
         if result and result['subnets']:
             return result['subnets'][0]['id']
         else:
-            raise Exception("subnet %s/%s not found".format(project_id, name))
+            raise Exception("subnet {0}/{1} not found".format(project_id, name))
 
 
     @staticmethod
