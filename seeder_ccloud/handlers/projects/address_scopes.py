@@ -126,5 +126,6 @@ class Address_Scopes():
             pools = Subnet_Pools(self.args, self.dry_run)
             for subnet_pool in subnet_pools:
                 subnet_pool['project'] = project_name
+                subnet_pool['domain'] = scope['domain']
                 subnet_pool['address_scope_id'] = resource['id']
             self.diffs[scope['name'] + "_subnetpools"] = pools.seed(subnet_pools)
