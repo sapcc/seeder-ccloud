@@ -23,7 +23,8 @@ config = utils.Config()
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
 def validate(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
-    subnet_pools = spec.get('subnet_pools', [])
+    subnet_pools = spec['openstack'].get('subnet_pools', [])
+    
     for subnet_pool in subnet_pools:
         if 'name' not in subnet_pool or not subnet_pool['name']:
             raise kopf.AdmissionError("subnet_pool must have a name...")
@@ -101,6 +102,7 @@ class Subnet_Pools():
 
             for attr in list(subnet_pool.keys()):
                 if attr != 'prefixes':
+                    # https://github.com/seperman/deepdiff/issues/180
                     # a hacky comparison due to the neutron api not dealing with string/int attributes consistently
                     if str(subnet_pool[attr]) != str(resource.get(attr, '')):
                         logging.info(f"subnet_pool {subnet_pool['name']} differs: {attr}")

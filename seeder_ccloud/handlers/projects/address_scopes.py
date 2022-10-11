@@ -24,7 +24,7 @@ config = utils.Config()
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
 def validate_address_scopes(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
-    address_scopes = spec.get('address_scopes', [])
+    address_scopes = spec['openstack'].get('address_scopes', [])
     for address_scope in address_scopes:
         if 'name' not in address_scope or not address_scope['name']:
             raise kopf.AdmissionError("address_scope must have a name...")
