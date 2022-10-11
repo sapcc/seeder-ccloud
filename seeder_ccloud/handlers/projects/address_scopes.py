@@ -17,7 +17,7 @@ import logging, kopf
 from typing import List
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-from subnet_pools import Subnet_Pools
+from seeder_ccloud.handlers.projects.subnet_pools import Subnet_Pools
 from deepdiff import DeepDiff
 
 config = utils.Config()
