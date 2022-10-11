@@ -34,6 +34,7 @@ class Handlers():
         import seeder_ccloud.handlers.domains
         import seeder_ccloud.handlers.projects.networks
         import seeder_ccloud.handlers.projects.subnet_pools
+        import seeder_ccloud.handlers.projects.address_scopes
         #import seeder_ccloud.handlers.flavors
         #import seeder_ccloud.handlers.groups
         #import seeder_ccloud.handlers.role_assignments
