@@ -83,7 +83,8 @@ class Address_Scopes():
         :return: 
         """
         project_name = scope['project']
-        project_id = self.openstack.get_project_id(scope['domain'], project_name)
+        domain_name = scope['domain']
+        project_id = self.openstack.get_project_id(domain_name, project_name)
         
         logging.debug(f"seeding address-scope {scope['name']} of project {project_name}")
 
@@ -126,6 +127,6 @@ class Address_Scopes():
             pools = Subnet_Pools(self.args, self.dry_run)
             for subnet_pool in subnet_pools:
                 subnet_pool['project'] = project_name
-                subnet_pool['domain'] = scope['domain']
+                subnet_pool['domain'] = domain_name
                 subnet_pool['address_scope_id'] = resource['id']
             self.diffs[scope['name'] + "_subnetpools"] = pools.seed(subnet_pools)
