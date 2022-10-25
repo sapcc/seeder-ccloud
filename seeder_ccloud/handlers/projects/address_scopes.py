@@ -56,7 +56,7 @@ def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, annotations, **
         changed = utils.get_changed_seeds(old, new)
         Address_Scopes(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
-        raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+        raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
 
 
 class Address_Scopes():
@@ -69,7 +69,10 @@ class Address_Scopes():
     def seed(self, address_scopes):
         self.diffs = {}
         for address_scope in address_scopes:
-            self._seed_address_scope(address_scope)
+            try:
+                self._seed_address_scope(address_scope)
+            except Exception as e:
+                raise Exception(f"{address_scope['name']}. error: {e}")
         return self.diffs
 
 
