@@ -1,6 +1,7 @@
-image: 
-  name: ccloud-seeder
-  tag: latest
+ccloud_seeder:
+  image: 
+    name: ccloud-seeder
+    tag: latest
 
 operator:
   dry_run: true
