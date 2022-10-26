@@ -28,7 +28,7 @@ spec:
       serviceAccountName: ccloud-seeder
       containers:
       - name: operator
-        image: "{{ .Values.global.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        image: "{{ .Values.global.registry }}/{{ .Values.image.name }}:{{ .Values.ccloud-seeder.image.tag }}"
         command:
           - seeder_ccloud
         {{- if .Values.operator.dry_run }}
@@ -79,7 +79,7 @@ spec:
               name: ccloud-seeder
               key: OS_PROJECT_DOMAIN_ID
       - name: exporter
-        image: "{{ .Values.global.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        image: "{{ .Values.global.registry }}/{{ .Values.image.name }}:{{ .Values.ccloud-seeder.image.tag }}"
         ports:
         - containerPort: 9000
           name: metrics
