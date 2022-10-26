@@ -28,7 +28,7 @@ spec:
       serviceAccountName: ccloud-seeder
       containers:
       - name: operator
-        image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.image_tag }}"
+        image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.ccloud-seeder.image_tag }}"
         command:
           - seeder_ccloud
         {{- if .Values.operator.dry_run }}

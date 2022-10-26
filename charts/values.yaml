@@ -1,5 +1,7 @@
 image: ccloud-seeder
-image_tag: latest
+
+ccloud-seeder:
+  image_tag: DEFINED_BY_PIPELINE
 
 operator:
   dry_run: true
