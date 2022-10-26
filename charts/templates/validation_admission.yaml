@@ -63,7 +63,7 @@ webhooks:
     url: https://ccloud-seeder.{{ .Values.global.region }}.cloud.sap/validate_networks/spec.openstack.address_scopes
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: validate-address-scopes.spec.openstack.address_scopes.seeder.cloud.sap
+  name: validate-address-scopes.spec.openstack.address-scopes.seeder.cloud.sap
   namespaceSelector: {}
   objectSelector: {}
   rules:
