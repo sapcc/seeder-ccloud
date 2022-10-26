@@ -1,7 +1,6 @@
-image: ccloud-seeder
-
-ccloud-seeder:
-  image_tag: DEFINED_BY_PIPELINE
+image: 
+  name: ccloud-seeder
+  tag: DEFINED_BY_PIPELINE
 
 operator:
   dry_run: true
