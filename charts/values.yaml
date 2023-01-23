@@ -1,7 +1,14 @@
 ccloud_seeder:
-  image: 
+  image:
     name: ccloud-seeder
     tag: latest
 
 operator:
   dry_run: true
+
+owner-info:
+  helm-chart-url: "https://github.com/sapcc/helm-charts/tree/master/system/example"
+  maintainers:
+    - Stefan Hipfel
+  support-group: compute-storage-api
+  service: seeder
