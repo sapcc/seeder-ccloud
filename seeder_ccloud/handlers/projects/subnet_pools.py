@@ -74,6 +74,7 @@ class Subnet_Pools():
         logging.debug(f"seeding subnet-pool {subnet_pool['name']} of project {project_name}")
 
         neutron = self.openstack.get_neutronclient()
+        tags = subnet_pool.pop('tags', None)
         subnet_pool = self.openstack.sanitize(subnet_pool, (
             'name', 'default_quota', 'prefixes', 'min_prefixlen',
             'shared',
@@ -87,12 +88,14 @@ class Subnet_Pools():
                 'name': subnet_pool['name']}
         result = neutron.list_subnetpools(retrieve_all=True,
                                         **query)
+        resource = None
         self.diffs[subnet_pool['name']] = []
         if not result or not result['subnetpools']:
             logging.info(f"create subnet-pool {project_name}/{subnet_pool['name']}")
             self.diffs[subnet_pool['name']].append('create')
             if not self.dry_run:
                 result = neutron.create_subnetpool(body)
+                resource = result['subnetpools'][0]
         else:
             resource = result['subnetpools'][0]
             diff = DeepDiff(resource.get('prefixes', []), subnet_pool.get('prefixes', []))
@@ -114,3 +117,29 @@ class Subnet_Pools():
                     body['subnetpool'].pop('tenant_id', None)
                     body['subnetpool'].pop('shared', None)
                     neutron.update_subnetpool(resource['id'], body)
+        
+        if tags and resource:
+            self._seed_subnet_pool_tags(resource, tags)
+
+
+    def _seed_subnet_pool_tags(self, subnet_pool, tags):
+        """
+            seed neutron tags of a subnet_pool
+            :param network:
+            :param tags:
+            :param args:
+            :param sess:
+            :return:
+            """
+
+        logging.debug(f"seeding tags of subnet_pool {subnet_pool['name']}")
+
+        # grab a neutron client
+        neutron = self.openstack.get_neutronclient()
+
+        for tag in tags:
+            if tag not in subnet_pool['tags']:
+                self.diffs[subnet_pool['name']].append(f"create tag: {tag}")
+                logging.debug(f"adding tag {tag} to network {subnet_pool['name']}")
+                if not self.dry_run:
+                    neutron.add_tag('subnet_pools', subnet_pool['id'], tag)
