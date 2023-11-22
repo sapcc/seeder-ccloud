@@ -142,4 +142,4 @@ class Subnet_Pools():
                 self.diffs[subnet_pool['name']].append(f"create tag: {tag}")
                 logging.debug(f"adding tag {tag} to network {subnet_pool['name']}")
                 if not self.dry_run:
-                    neutron.add_tag('subnet_pools', subnet_pool['id'], tag)
+                    neutron.add_tag('subnetpools', subnet_pool['id'], tag)
