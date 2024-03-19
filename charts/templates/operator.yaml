@@ -35,7 +35,7 @@ spec:
         {{- if .Values.operator.dry_run }}
           - --dry-run
         {{- end }}
-          - --log={{ .Values.operator.dry_run }}
+          - --log={{ .Values.operator.log_level }}
           - --config-file=/etc/operator/config.ini
         volumeMounts:
           - name: config
