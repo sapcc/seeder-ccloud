@@ -5,6 +5,7 @@ metadata:
     kubernetes.io/tls-acme: "true"
     meta.helm.sh/release-name: {{ .Release.Name }}
     meta.helm.sh/release-namespace: monsoon3
+    {{- include "utils.linkerd.ingress_annotation" . | indent 4 }}
     disco: "true"
   labels:
     app: ccloud-seeder
