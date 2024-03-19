@@ -12,7 +12,6 @@ global:
 
 owner-info:
   helm-chart-url: "https://github.com/sapcc/seeder-ccloud/tree/main/charts"
-
   maintainers:
     - Stefan Hipfel
   support-group: compute-storage-api
