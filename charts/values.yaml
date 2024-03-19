@@ -11,7 +11,8 @@ global:
   linkerd_requested: false
 
 owner-info:
-  helm-chart-url: "https://github.com/sapcc/helm-charts/tree/master/system/example"
+  helm-chart-url: "https://github.com/sapcc/seeder-ccloud/tree/main/charts"
+
   maintainers:
     - Stefan Hipfel
   support-group: compute-storage-api
