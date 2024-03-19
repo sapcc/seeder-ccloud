@@ -1,11 +1,15 @@
 ccloud_seeder:
-  image: 
+  image:
     name: ccloud-seeder
     tag: latest
 
 operator:
   dry_run: true
-  
+  log_level: INFO
+
+global:
+  linkerd_requested: false
+
 owner-info:
   helm-chart-url: "https://github.com/sapcc/seeder-ccloud/tree/main/charts"
   maintainers:
