@@ -23,6 +23,7 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
         prometheus.io/scrape: "true"
         prometheus.io/targets: "openstack"
+        {{- include "utils.linkerd.pod_and_service_annotation" . | indent 8 }}
     spec:
       serviceAccount: ccloud-seeder
       serviceAccountName: ccloud-seeder
@@ -34,7 +35,7 @@ spec:
         {{- if .Values.operator.dry_run }}
           - --dry-run
         {{- end }}
-          - --log=DEBUG
+          - --log={{ .Values.operator.dry_run }}
           - --config-file=/etc/operator/config.ini
         volumeMounts:
           - name: config

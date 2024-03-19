@@ -6,6 +6,8 @@ metadata:
   labels:
     type: operator
     service: ccloud-seeder
+  annotations:
+    {{- include "utils.linkerd.service_annotation" . | indent 4 }}
 spec:
   selector:
     app: ccloud-seeder
