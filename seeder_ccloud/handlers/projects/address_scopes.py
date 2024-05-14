@@ -22,8 +22,12 @@ from deepdiff import DeepDiff
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
-def validate_address_scopes(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
+
+@kopf.on.validate(config.crd_info['plural'],
+                  annotations={'operatorVersion': config.operator_version},
+                  field='spec.openstack.address_scopes')
+def validate_address_scopes(memo: kopf.Memo, dryrun, spec, old,
+                            warnings: List[str], **_):
     address_scopes = spec['openstack'].get('address_scopes', [])
     for address_scope in address_scopes:
         if 'name' not in address_scope or not address_scope['name']:
@@ -36,9 +40,11 @@ def validate_address_scopes(memo: kopf.Memo, dryrun, spec, old, warnings: List[s
     if dryrun and address_scopes:
         old_address_scopes = None
         if old is not None:
-            old_address_scopes = old['spec']['openstack'].get('address_scopes', None)
-        try: 
-            changed = utils.get_changed_seeds(old_address_scopes, address_scopes)
+            old_address_scopes = old['spec']['openstack'].get(
+                'address_scopes', None)
+        try:
+            changed = utils.get_changed_seeds(old_address_scopes,
+                                              address_scopes)
             diffs = Address_Scopes(memo['args'], dryrun).seed(changed)
             if diffs:
                 warnings.append({'address_scopes': diffs})
@@ -46,13 +52,22 @@ def validate_address_scopes(memo: kopf.Memo, dryrun, spec, old, warnings: List[s
             raise kopf.AdmissionError(e)
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.address_scopes')
-def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-    logging.debug('seeding {} address_scopes'.format(name))
+@kopf.on.update(config.crd_info['plural'],
+                annotations={'operatorVersion': config.operator_version},
+                field='spec.openstack.address_scopes')
+@kopf.on.create(config.crd_info['plural'],
+                annotations={'operatorVersion': config.operator_version},
+                field='spec.openstack.address_scopes')
+def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, spec,
+                                annotations, runtime, **_):
+    logging.debug(f"seeding {name} address_scopes since {runtime}")
+
     if not config.is_dependency_successful(annotations):
-        raise kopf.TemporaryError(f"error seeding {name}: dependencies error", delay=30)
+        raise kopf.TemporaryError(f"error seeding {name}: dependencies error",
+                                  delay=30)
     try:
+        if 'openstack' not in spec or 'address_scopes' not in spec['openstack']:
+            pass
         changed = utils.get_changed_seeds(old, new)
         Address_Scopes(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
@@ -60,11 +75,11 @@ def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, annotations, **
 
 
 class Address_Scopes():
+
     def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
         self.args = args
         self.dry_run = dry_run
-
 
     def seed(self, address_scopes):
         self.diffs = {}
@@ -74,7 +89,6 @@ class Address_Scopes():
             except Exception as e:
                 raise Exception(f"{address_scope['name']}. error: {e}")
         return self.diffs
-
 
     def _seed_address_scope(self, scope):
         """
@@ -88,26 +102,28 @@ class Address_Scopes():
         project_name = scope['project']
         domain_name = scope['domain']
         project_id = self.openstack.get_project_id(domain_name, project_name)
-        
-        logging.debug(f"seeding address-scope {scope['name']} of project {project_name}")
+
+        logging.debug(
+            f"seeding address-scope {scope['name']} of project {project_name}")
 
         neutron = self.openstack.get_neutronclient()
         self.diffs[scope['name']] = []
- 
+
         subnet_pools = None
         if 'subnet_pools' in scope:
             subnet_pools = scope.pop('subnet_pools', None)
 
-        scope = self.openstack.sanitize(scope, ('name', 'ip_version', 'shared'))
+        scope = self.openstack.sanitize(scope,
+                                        ('name', 'ip_version', 'shared'))
 
         body = {'address_scope': scope.copy()}
         body['address_scope']['tenant_id'] = project_id
         query = {'tenant_id': project_id, 'name': scope['name']}
-        result = neutron.list_address_scopes(retrieve_all=True,
-                                            **query)
+        result = neutron.list_address_scopes(retrieve_all=True, **query)
         resource = None
         if not result or not result['address_scopes']:
-            logging.info(f"create address-scope {project_name}/{scope['name']}")
+            logging.info(
+                f"create address-scope {project_name}/{scope['name']}")
             self.diffs[scope['name']].append('create')
             if not self.dry_run:
                 result = neutron.create_address_scope(body)
@@ -117,19 +133,24 @@ class Address_Scopes():
             diff = DeepDiff(resource, scope)
             if 'values_changed' in diff:
                 self.diffs[scope['name']].append(diff['values_changed'])
-                logging.info(f"address-scope {project_name}/{scope['name']} differs.")
+                logging.info(
+                    f"address-scope {project_name}/{scope['name']} differs.")
                 # drop read-only attributes
                 body['address_scope'].pop('tenant_id', None)
                 body['address_scope'].pop('ip_version', None)
                 if not self.dry_run:
-                    neutron.update_address_scope(resource['id'],
-                                                body)
+                    neutron.update_address_scope(resource['id'], body)
 
         if subnet_pools and resource:
             self.diffs[scope['name'] + "_subnetpools"] = {}
             pools = Subnet_Pools(self.args, self.dry_run)
+            # allow to overwrite address_scope project/domain
             for subnet_pool in subnet_pools:
-                subnet_pool['project'] = project_name
+                if 'project' not in subnet_pool:
+                    subnet_pool['project'] = project_name
+                if 'domain' not in subnet_pool:
+                    subnet_pool['domain'] = domain_name
                 subnet_pool['domain'] = domain_name
                 subnet_pool['address_scope_id'] = resource['id']
-            self.diffs[scope['name'] + "_subnetpools"] = pools.seed(subnet_pools)
+            self.diffs[scope['name'] +
+                       "_subnetpools"] = pools.seed(subnet_pools)
