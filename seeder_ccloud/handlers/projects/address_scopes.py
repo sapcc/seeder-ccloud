@@ -144,10 +144,11 @@ class Address_Scopes():
         if subnet_pools and resource:
             self.diffs[scope['name'] + "_subnetpools"] = {}
             pools = Subnet_Pools(self.args, self.dry_run)
+            # allow to overwrite address_scope project/domain
             for subnet_pool in subnet_pools:
-                if 'project' not in subnet_pools:
+                if 'project' not in subnet_pool:
                     subnet_pool['project'] = project_name
-                if 'domain' not in subnet_pools:
+                if 'domain' not in subnet_pool:
                     subnet_pool['domain'] = domain_name
                 subnet_pool['domain'] = domain_name
                 subnet_pool['address_scope_id'] = resource['id']
