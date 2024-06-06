@@ -21,8 +21,12 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
-@kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
-def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
+
+@kopf.on.validate(config.crd_info['plural'],
+                  annotations={'operatorVersion': config.operator_version},
+                  field='spec.openstack.networks')
+def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str],
+                      **_):
     networks = spec['openstack'].get('networks', [])
     for network in networks:
         if 'name' not in network or not network['name']:
@@ -30,11 +34,13 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], *
         tags = network.get('tags', [])
         for tag in tags:
             if not tag or len(tag) > 60:
-                raise kopf.AdmissionError("Tags size must not be > 60 if present..")
+                raise kopf.AdmissionError(
+                    "Tags size must not be > 60 if present..")
         subnets = network.get('subnets', [])
         for subnet in subnets:
             if 'name' not in subnet or not subnet['name']:
-                raise kopf.AdmissionError("Subnet must have a name if present..")
+                raise kopf.AdmissionError(
+                    "Subnet must have a name if present..")
 
     if dryrun and networks:
         old_networks = None
@@ -49,12 +55,17 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], *
             raise kopf.AdmissionError(error)
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.networks')
+@kopf.on.update(config.crd_info['plural'],
+                annotations={'operatorVersion': config.operator_version},
+                field='spec.openstack.networks')
+@kopf.on.create(config.crd_info['plural'],
+                annotations={'operatorVersion': config.operator_version},
+                field='spec.openstack.networks')
 def seed_networks_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     logging.debug(f"seeding {name} networks")
     if not config.is_dependency_successful(annotations):
-        raise kopf.TemporaryError(f"error seeding seed {name}: dependency error", delay=30)
+        raise kopf.TemporaryError(
+            f"error seeding seed {name}: dependency error", delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
         Networks(memo['args'], memo['dry_run']).seed(changed)
@@ -63,10 +74,10 @@ def seed_networks_handler(memo: kopf.Memo, new, old, name, annotations, **_):
 
 
 class Networks():
+
     def __init__(self, args, dry_run=False):
         self.openstack = OpenstackHelper(args)
         self.dry_run = dry_run
-
 
     def seed(self, networks):
         self.diffs = {}
@@ -74,22 +85,25 @@ class Networks():
             self._seed_network(network)
         return self.diffs
 
-
     def _seed_network(self, network):
         """
         seed a projects neutron networks and dependent objects
         :param networks:
         :return:
         """
-        project_id = self.openstack.get_project_id(network['domain'], network['project'])
+        project_id = self.openstack.get_project_id(network['domain'],
+                                                   network['project'])
         project_name = network['project']
         # network attribute name mappings
-        rename = {'router_external': 'router:external',
-                'provider_network_type': 'provider:network_type',
-                'provider_physical_network': 'provider:physical_network',
-                'provider_segmentation_id': 'provider:segmentation_id'}
+        rename = {
+            'router_external': 'router:external',
+            'provider_network_type': 'provider:network_type',
+            'provider_physical_network': 'provider:physical_network',
+            'provider_segmentation_id': 'provider:segmentation_id'
+        }
 
-        logging.debug(f"seeding network {network['name']} / project {project_name}")
+        logging.debug(
+            f"seeding network {network['name']} / project {project_name}")
 
         neutron = self.openstack.get_neutronclient()
         subnets = network.pop('subnets', None)
@@ -100,12 +114,12 @@ class Networks():
             if key in network:
                 network[value] = network.pop(key)
 
-        network = self.openstack.sanitize(network, (
-            'name', 'admin_state_up', 'port_security_enabled',
-            'provider:network_type', 'provider:physical_network',
-            'provider:segmentation_id', 'qos_policy_id',
-            'router:external',
-            'shared', 'vlan_transparent', 'description'))
+        network = self.openstack.sanitize(
+            network,
+            ('name', 'admin_state_up', 'port_security_enabled',
+             'provider:network_type', 'provider:physical_network',
+             'provider:segmentation_id', 'qos_policy_id', 'router:external',
+             'shared', 'vlan_transparent', 'description', 'availability_zone_hints'))
         self.diffs[network['name']] = []
         resource = None
         body = {'network': network.copy()}
@@ -114,8 +128,7 @@ class Networks():
         result = neutron.list_networks(retrieve_all=True, **query)
         if not result or not result['networks']:
             self.diffs[network['name']].append('create')
-            logging.debug(
-                f"create network {project_name}/{network['name']}")
+            logging.debug(f"create network {project_name}/{network['name']}")
             if not self.dry_run:
                 result = neutron.create_network(body)
                 resource = result['network']
@@ -125,7 +138,7 @@ class Networks():
             if 'values_changed' in diff:
                 self.diffs[network['name']].append(diff['values_changed'])
                 logging.debug(f"network {network['name']} differs: {diff}")
-            
+
                 body['network'].pop('tenant_id', None)
                 if not self.dry_run:
                     neutron.update_network(resource['id'], body)
@@ -136,9 +149,8 @@ class Networks():
         if subnets and resource:
             self._seed_network_subnets(resource, subnets)
 
-
     def _seed_network_tags(self, network, tags):
-            """
+        """
             seed neutron tags of a network
             :param network:
             :param tags:
@@ -147,18 +159,17 @@ class Networks():
             :return:
             """
 
-            logging.debug(f"seeding tags of network {network['name']}")
+        logging.debug(f"seeding tags of network {network['name']}")
 
-            # grab a neutron client
-            neutron = self.openstack.get_neutronclient()
+        # grab a neutron client
+        neutron = self.openstack.get_neutronclient()
 
-            for tag in tags:
-                if tag not in network['tags']:
-                    self.diffs[network['name']].append(f"create tag: {tag}")
-                    logging.debug(f"adding tag {tag} to network {network['name']}")
-                    if not self.dry_run:
-                        neutron.add_tag('networks', network['id'], tag)
-
+        for tag in tags:
+            if tag not in network['tags']:
+                self.diffs[network['name']].append(f"create tag: {tag}")
+                logging.debug(f"adding tag {tag} to network {network['name']}")
+                if not self.dry_run:
+                    neutron.add_tag('networks', network['id'], tag)
 
     def _seed_network_subnets(self, network, subnets):
         """
@@ -180,18 +191,19 @@ class Networks():
             if 'subnetpool' in subnet:
                 try:
                     subnet['subnetpool_id'] = self.openstack.get_subnetpool_id(
-                        network['tenant_id'],
-                        subnet['subnetpool'])
+                        network['tenant_id'], subnet['subnetpool'])
                 except Exception:
-                    raise Exception(f"subnet {network['name']}/{subnet}: invalid subnetpool")
-                
+                    raise Exception(
+                        f"subnet {network['name']}/{subnet}: invalid subnetpool"
+                    )
+
                 subnet.pop('subnetpool', None)
 
-            subnet = self.openstack.sanitize(subnet, (
-                'name', 'enable_dhcp', 'dns_nameservers',
-                'allocation_pools', 'host_routes', 'ip_version',
-                'gateway_ip', 'cidr', 'prefixlen', 'subnetpool_id',
-                'description'))
+            subnet = self.openstack.sanitize(
+                subnet,
+                ('name', 'enable_dhcp', 'dns_nameservers', 'allocation_pools',
+                 'host_routes', 'ip_version', 'gateway_ip', 'cidr',
+                 'prefixlen', 'subnetpool_id', 'description'))
 
             if 'gateway_ip' in subnet and subnet['gateway_ip'] == 'null':
                 subnet['gateway_ip'] = None
@@ -204,16 +216,21 @@ class Networks():
             result = neutron.list_subnets(retrieve_all=True, **query)
             self.diffs[network['name'] + '_subnet'] = []
             if not result or not result['subnets']:
-                self.diffs[network['name'] + '_subnet'].append(f"create subnet: {subnet['name']}")
-                logging.debug(f"create subnet {network['name']}/{subnet['name']}")
+                self.diffs[network['name'] + '_subnet'].append(
+                    f"create subnet: {subnet['name']}")
+                logging.debug(
+                    f"create subnet {network['name']}/{subnet['name']}")
                 if not self.dry_run:
                     neutron.create_subnet(body)
             else:
                 resource = result['subnets'][0]
                 diff = DeepDiff(resource, subnet)
                 if 'values_changed' in diff:
-                    self.diffs[network['name'] + '_subnet'].append(diff['values_changed'])
-                    logging.debug(f"network {network['name']} subnet {subnet['name']} differs: {diff}")
+                    self.diffs[network['name'] + '_subnet'].append(
+                        diff['values_changed'])
+                    logging.debug(
+                        f"network {network['name']} subnet {subnet['name']} differs: {diff}"
+                    )
                     if not self.dry_run:
                         # drop read-only attributes
                         body['subnet'].pop('cidr', None)
