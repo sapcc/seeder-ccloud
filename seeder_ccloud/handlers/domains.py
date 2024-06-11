@@ -14,7 +14,7 @@
  limitations under the License.
 """
 
-import logging, kopf
+import logging, kopf, time
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
@@ -49,9 +49,14 @@ def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        start = time.time()
         changed = utils.get_changed_seeds(old, new)
         Domains(memo['args'], memo['dry_run']).seed(changed)
+        duration = time.time() - start
+        patch.status['state'] = "seeded"
+        patch.spec['duration'] = str(duration)
     except Exception as error:
+        patch.status['state'] = "failed"
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     logging.info('DONE seeding {} == > domains'.format(name))
 
