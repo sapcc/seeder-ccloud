@@ -1,4 +1,4 @@
-"""
+ q"""
  Copyright 2021 SAP SE
  
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
  limitations under the License.
 """
 
-import logging, kopf
+import logging, kopf, time
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
