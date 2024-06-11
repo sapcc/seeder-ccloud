@@ -44,7 +44,7 @@ def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
-def seed_domains_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
     logging.info('seeding {} == > domains'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
