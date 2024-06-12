@@ -14,6 +14,7 @@
  limitations under the License.
 """
 import logging, kopf, time
+from datetime import timedelta
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -52,10 +53,10 @@ def seed_role_assignments_handler(memo: kopf.Memo,  patch: kopf.Patch, new, old,
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
-        start = time.time()
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Role_Assignments(memo['args']).seed(changed)
-        duration = time.time() - start
+        duration = timedelta(seconds=time.perf_counter()-starttime)
         patch.status['state'] = "seeded"
         patch.spec['duration'] = str(duration)
     except Exception as error:
