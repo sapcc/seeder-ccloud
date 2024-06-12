@@ -111,8 +111,10 @@ class Role_Assignments():
                         "project %s not found, skipping role assignment.." %
                         assignment['project'])
                 role_assignment['project'] = id
+                role_assignment.pop('domain')
             elif 'project_id' in assignment:
                 role_assignment['project'] = assignment['project_id']
+                role_assignment.pop('domain')
             if 'inherited' in assignment:
                 role_assignment['os_inherit_extension_inherited'] = \
                     assignment['inherited']
