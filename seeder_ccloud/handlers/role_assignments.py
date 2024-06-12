@@ -13,7 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -26,6 +27,8 @@ def validate_role_assignments(spec, dryrun, **_):
     for assignment in role_assignments:
         if not 'role' in assignment:
             raise kopf.AdmissionError("role name is mandatory")
+        if not 'domain' in assignment:
+            raise kopf.AdmissionError("domain name is mandatory")
 
         if any (k in assignment and '@' not in assignment[k] for k in ('user', 'group', 'project')):
             raise kopf.AdmissionError('group, user and project need the following format: [user,group,project]@domain')
@@ -37,7 +40,7 @@ def validate_role_assignments(spec, dryrun, **_):
                 raise kopf.AdmissionError("with system: project or domain are not allowed")
         
         if all (k in assignment for k in ("group", "user")):
-            raise kopf.AdmissionError("setting group and user at the same time is allowed")
+            raise kopf.AdmissionError("setting group and user at the same time is not allowed")
         
         if all (k in assignment for k in ('domain', 'project')):
             raise kopf.AdmissionError("setting project and domain at the same time is not allowed")
@@ -45,14 +48,19 @@ def validate_role_assignments(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
-def seed_role_assignments_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_role_assignments_handler(memo: kopf.Memo,  patch: kopf.Patch, new, old, name, annotations, **_):
     logging.info('seeding {} role_assignments'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Role_Assignments(memo['args']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        patch.status['state'] = "seeded"
+        patch.spec['duration'] = str(duration)
     except Exception as error:
+        patch.status['state'] = "failed"
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
@@ -73,8 +81,11 @@ class Role_Assignments():
         role_assignment = dict()
         role = assignment.pop('role')
         role_id = self.openstack.get_role_id(role)
+        domain = assignment['domain']
+        domain_id = self.openstack.get_domain_id(domain)
+        role_assignment['domain'] = domain_id
         if 'user' in assignment:
-            user, domain = assignment['user'].split('@')
+            user = assignment['user']
             id = self.openstack.get_user_id(domain, user)
             if not id:
                 raise Exception(
@@ -82,7 +93,7 @@ class Role_Assignments():
                     assignment['user'])
             role_assignment['user'] = id
         elif 'group' in assignment:
-            group, domain = assignment['group'].split('@')
+            group = assignment['group']
             id = self.openstack.get_group_id(domain, group)
             if not id:
                 raise Exception(
@@ -92,15 +103,8 @@ class Role_Assignments():
         if 'system' in assignment:
             role_assignment['system'] = assignment['system']
         else:
-            if 'domain' in assignment:
-                id = self.openstack.get_domain_id(assignment['domain'])
-                if not id:
-                    raise Exception(
-                        "domain %s not found, skipping role assignment.." %
-                        assignment['domain'])
-                role_assignment['domain'] = id
             if 'project' in assignment:
-                project, domain = assignment['project'].split('@')
+                project = assignment['project']
                 id = self.openstack.get_project_id(domain, project)
                 if not id:
                     raise Exception(
@@ -109,7 +113,6 @@ class Role_Assignments():
                 role_assignment['project'] = id
             elif 'project_id' in assignment:
                 role_assignment['project'] = assignment['project_id']
-
             if 'inherited' in assignment:
                 role_assignment['os_inherit_extension_inherited'] = \
                     assignment['inherited']
