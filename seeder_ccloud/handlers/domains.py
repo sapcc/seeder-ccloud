@@ -98,9 +98,9 @@ class Domains():
             if 'values_changed' in diff:
                 self.diffs[domain['name']].append(diff['values_changed'])
                 logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
-            if not self.dry_run:
-                logging.info("update domain '%s'" % domain['name'])
-                keystone.domains.update(resource.id, **domain)
+                if not self.dry_run:
+                    logging.info("update domain '%s'" % domain['name'])
+                    keystone.domains.update(resource.id, **domain)
 
         if driver:
             self._seed_domain_config(resource, driver)
@@ -118,12 +118,13 @@ class Domains():
             if 'values_changed' in diff:
                 self.diffs[domain.name+'_config'].append(diff['values_changed'])
                 logging.debug("domain %s differs: '%s'" % (domain.name, diff))
-            if not self.dry_run:
-                keystone.domain_configs.update(domain, driver)
+                if not self.dry_run:
+                    logging.info('update domain config %s' % domain.name)
+                    keystone.domain_configs.update(domain, driver)
         except exceptions.NotFound:
             self.diffs[domain.name + '_config'].append('create')
             if not self.dry_run:
-                logging.debug('creating domain config %s' % domain.name)
+                logging.info('create domain config %s' % domain.name)
                 keystone.domain_configs.create(domain, driver)
         except Exception as e:
             logging.error(
