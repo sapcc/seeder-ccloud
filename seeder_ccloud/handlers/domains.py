@@ -106,9 +106,9 @@ class Domains():
 
 
     def _seed_domain_config(self, domain, driver):
-        logging.debug(
-            "seeding domain config %s %s" % (domain.name, self.openstack.redact(driver)))
-        self.diffs[domain.name + '_config'] = []
+        logging.info(
+            "seeding domain config %s %s" % (domain['name'], self.openstack.redact(driver)))
+        self.diffs[domain['name'] + '_config'] = []
         keystone = self.openstack.get_keystoneclient()
         # get the current domain configuration
         try:
@@ -120,10 +120,10 @@ class Domains():
             if not self.dry_run:
                 keystone.domain_configs.update(domain, driver)
         except exceptions.NotFound:
-            self.diffs[domain.name + '_config'].append('create')
+            self.diffs[domain['name'] + '_config'].append('create')
             if not self.dry_run:
-                logging.debug('creating domain config %s' % domain.name)
+                logging.debug('creating domain config %s' % domain['name'])
                 keystone.domain_configs.create(domain, driver)
         except Exception as e:
             logging.error(
-                'could not configure domain %s: %s' % (domain.name, e))
+                'could not configure domain %s: %s' % (domain['name'], e))
