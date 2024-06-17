@@ -36,14 +36,14 @@ class Handlers():
 
         #import seeder_ccloud.handlers.regions
         import seeder_ccloud.handlers.domains
+        import seeder_ccloud.handlers.groups
+        import seeder_ccloud.handlers.projects.projects
+        import seeder_ccloud.handlers.role_assignments
+        #import seeder_ccloud.handlers.flavors
         import seeder_ccloud.handlers.projects.networks
         import seeder_ccloud.handlers.projects.subnet_pools
         import seeder_ccloud.handlers.projects.address_scopes
         import seeder_ccloud.handlers.projects.network_quotas
-        import seeder_ccloud.handlers.groups
-        import seeder_ccloud.handlers.role_assignments
-        import seeder_ccloud.handlers.projects.projects
-        #import seeder_ccloud.handlers.flavors
 
     def has_dependency_cycle(self, k8s_client, seed_name, namespace, requires):
         if requires is None:
