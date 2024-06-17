@@ -90,7 +90,7 @@ class Domains():
         if not result:
             self.diffs[domain['name']].append('create')
             if not self.dry_run:
-                logging.debug("create domain '%s'" % domain['name'])
+                logging.info("create domain '%s'" % domain['name'])
                 resource = keystone.domains.create(**domain)
         else:
             resource = result[0]
@@ -98,8 +98,9 @@ class Domains():
             if 'values_changed' in diff:
                 self.diffs[domain['name']].append(diff['values_changed'])
                 logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
-            if not self.dry_run:
-                keystone.domains.update(resource.id, **domain)
+                if not self.dry_run:
+                    logging.info("update domain '%s'" % domain['name'])
+                    keystone.domains.update(resource.id, **domain)
 
         if driver:
             self._seed_domain_config(resource, driver)
@@ -107,23 +108,24 @@ class Domains():
 
     def _seed_domain_config(self, domain, driver):
         logging.info(
-            "seeding domain config %s %s" % (domain['name'], self.openstack.redact(driver)))
-        self.diffs[domain['name'] + '_config'] = []
+            "seeding domain config %s %s" % (domain.name, self.openstack.redact(driver)))
+        self.diffs[domain.name + '_config'] = []
         keystone = self.openstack.get_keystoneclient()
         # get the current domain configuration
         try:
             result = keystone.domain_configs.get(domain)
             diff = DeepDiff(result.to_dict(), driver, exclude_obj_callback=utils.diff_exclude_password_callback)
             if 'values_changed' in diff:
-                self.diffs[domain['name']+'_config'].append(diff['values_changed'])
-                logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
-            if not self.dry_run:
-                keystone.domain_configs.update(domain, driver)
+                self.diffs[domain.name+'_config'].append(diff['values_changed'])
+                logging.debug("domain %s differs: '%s'" % (domain.name, diff))
+                if not self.dry_run:
+                    logging.info('update domain config %s' % domain.name)
+                    keystone.domain_configs.update(domain, driver)
         except exceptions.NotFound:
-            self.diffs[domain['name'] + '_config'].append('create')
+            self.diffs[domain.name + '_config'].append('create')
             if not self.dry_run:
-                logging.debug('creating domain config %s' % domain['name'])
+                logging.info('create domain config %s' % domain.name)
                 keystone.domain_configs.create(domain, driver)
         except Exception as e:
             logging.error(
-                'could not configure domain %s: %s' % (domain['name'], e))
+                'could not configure domain %s: %s' % (domain.name, e))
