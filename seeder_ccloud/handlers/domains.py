@@ -86,6 +86,7 @@ class Domains():
         domain = self.openstack.sanitize(domain, ('name', 'description', 'enabled'))
 
         result = keystone.domains.list(name=domain['name'])
+        resource = None
         if not result:
             self.diffs[domain['name']].append('create')
             if not self.dry_run:
