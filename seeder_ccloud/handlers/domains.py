@@ -15,6 +15,7 @@
 """
 
 import logging, kopf, time
+from datetime import timedelta
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
@@ -44,15 +45,15 @@ def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
-def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_domains_handler(memo: kopf.Memo,  patch: kopf.Patch, new, old, name, annotations, **_):
     logging.info('seeding {} == > domains'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
-        start = time.time()
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Domains(memo['args'], memo['dry_run']).seed(changed)
-        duration = time.time() - start
+        duration = timedelta(seconds=time.perf_counter()-starttime)
         patch.status['state'] = "seeded"
         patch.spec['duration'] = str(duration)
     except Exception as error:
@@ -90,7 +91,7 @@ class Domains():
             self.diffs[domain['name']].append('create')
             if not self.dry_run:
                 logging.debug("create domain '%s'" % domain['name'])
-                resource = keystone.domains.create(**domain)
+                keystone.domains.create(**domain)
         else:
             resource = result[0]
             diff = DeepDiff(resource.to_dict(), domain)
@@ -101,7 +102,7 @@ class Domains():
                 keystone.domains.update(resource.id, **domain)
 
         if driver:
-            self._seed_domain_config(resource, driver)
+            self._seed_domain_config(result[0], driver)
 
 
     def _seed_domain_config(self, domain, driver):
