@@ -25,10 +25,11 @@ config = utils.Config()
 
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
-def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
+def validate_domains(memo: kopf.Memo, patch: kopf.Patch, dryrun, spec, old, warnings: List[str], **_):
     domains = spec['openstack'].get('domains', [])
     for domain in domains:
         if 'name' not in domain or not domain['name']:
+            patch.status['error'].append({'message': str("domains must have a name"), 'handler': 'openstack.domains'})
             raise kopf.AdmissionError("Domains must have a name if present..")
     
     if dryrun and domains:
@@ -51,12 +52,14 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
     try:
         start = time.time()
         changed = utils.get_changed_seeds(old, new)
-        Domains(memo['args'], memo['dry_run']).seed(changed)
+        diffs = Domains(memo['args'], memo['dry_run']).seed(changed)
         duration = time.time() - start
         patch.status['state'] = "seeded"
         patch.spec['duration'] = str(duration)
+        patch.status['diffs'].update({'openstack.domains': diffs})
     except Exception as error:
         patch.status['state'] = "failed"
+        patch.status['error'].update({'openstack.domains': str(error)})
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     logging.info('DONE seeding {} == > domains'.format(name))
 
@@ -97,7 +100,7 @@ class Domains():
             diff = DeepDiff(resource.to_dict(), domain)
             if 'values_changed' in diff:
                 self.diffs[domain['name']].append(diff['values_changed'])
-                logging.debug("domain %s differs: '%s'" % (domain['name'], diff))
+                logging.info("domain %s differs: '%s'" % (domain['name'], diff))
                 if not self.dry_run:
                     logging.info("update domain '%s'" % domain['name'])
                     keystone.domains.update(resource.id, **domain)
@@ -117,7 +120,7 @@ class Domains():
             diff = DeepDiff(result.to_dict(), driver, exclude_obj_callback=utils.diff_exclude_password_callback)
             if 'values_changed' in diff:
                 self.diffs[domain.name+'_config'].append(diff['values_changed'])
-                logging.debug("domain %s differs: '%s'" % (domain.name, diff))
+                logging.info("domain_config %s differs: '%s'" % (domain.name, diff))
                 if not self.dry_run:
                     logging.info('update domain config %s' % domain.name)
                     keystone.domain_configs.update(domain, driver)
