@@ -50,7 +50,7 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
-        starttime = time.time()
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         diffs = Domains(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
@@ -84,7 +84,7 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     
     finally:
-        patch.status['latest_reconcile'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     
     logging.info('successfully seeded {}: domains'.format(name))
 

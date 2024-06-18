@@ -68,7 +68,7 @@ def seed_networks_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, an
         raise kopf.TemporaryError(
             f"error seeding seed {name}: dependency error", delay=30)
     try:
-        starttime = time.time()
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Networks(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
@@ -78,7 +78,7 @@ def seed_networks_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, an
         patch.status['state'] = "failed"
         raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
     finally:
-        patch.status['latest_reconcile'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
     logging.info(f"successfully seeded {name}: networks")
 
