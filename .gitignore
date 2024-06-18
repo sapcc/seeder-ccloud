@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 *.tgz
+
+/.testing
+/etc/certificates
