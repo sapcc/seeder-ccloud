@@ -13,7 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta, datetime
 from typing import List
 from seeder_ccloud import utils
 from deepdiff import DeepDiff
@@ -61,17 +62,25 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str],
 @kopf.on.create(config.crd_info['plural'],
                 annotations={'operatorVersion': config.operator_version},
                 field='spec.openstack.networks')
-def seed_networks_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_networks_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
     logging.debug(f"seeding {name} networks")
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError(
             f"error seeding seed {name}: dependency error", delay=30)
     try:
+        starttime = time.time()
         changed = utils.get_changed_seeds(old, new)
         Networks(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        patch.status['state'] = "seeded"
+        patch.spec['duration'] = str(duration)
     except Exception as error:
+        patch.status['state'] = "failed"
         raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
+    finally:
+        patch.status['latest_reconcile'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
+    logging.info(f"successfully seeded {name}: networks")
 
 class Networks():
 

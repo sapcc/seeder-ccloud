@@ -44,6 +44,11 @@ spec:
           priority: 0
           jsonPath: .status.changes
           description: changes being applied.
+        - name: LatestReconcile
+          type: date
+          priority: 0
+          jsonPath: .status.latest_reconcile
+          description: When the CcloudSeed was last updated.
         - name: Age
           type: date
           priority: 0

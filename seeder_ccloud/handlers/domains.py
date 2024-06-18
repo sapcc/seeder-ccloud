@@ -15,6 +15,7 @@
 """
 
 import logging, kopf, time, json
+from datetime import timedelta, datetime
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
@@ -45,14 +46,14 @@ def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
-    logging.info('seeding {} == > domains'.format(name))
+    logging.info('seeding {}: domains'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
-        start = time.time()
+        starttime = time.time()
         changed = utils.get_changed_seeds(old, new)
         diffs = Domains(memo['args'], memo['dry_run']).seed(changed)
-        duration = time.time() - start
+        duration = timedelta(seconds=time.perf_counter()-starttime)
         patch.status['state'] = "seeded"
         patch.spec['duration'] = str(duration)
         if not 'changes' in patch.status:
@@ -82,7 +83,10 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
                 logging.error('error updating latest_error: {}'.format(str(error)))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     
-    logging.info('DONE seeding {} == > domains'.format(name))
+    finally:
+        patch.status['latest_reconcile'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+    
+    logging.info('successfully seeded {}: domains'.format(name))
 
 
 class Domains():
