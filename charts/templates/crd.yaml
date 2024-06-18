@@ -35,14 +35,12 @@ spec:
           jsonPath: .status.state
           description: As returned from the handler (sometimes).
         - name: Error
-          type: object
-          x-kubernetes-preserve-unknown-fields: true
+          type: string
           priority: 0
           jsonPath: .status.error
           description: Error message if the seed failed.
         - name: Changes
-          type: object
-          x-kubernetes-preserve-unknown-fields: true
+          type: string
           priority: 0
           jsonPath: .status.changes
           description: changes being applied.

@@ -14,7 +14,7 @@
  limitations under the License.
 """
 
-import logging, kopf, time
+import logging, kopf, time, json
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from deepdiff import DeepDiff
@@ -56,10 +56,14 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
         duration = time.time() - start
         patch.status['state'] = "seeded"
         patch.spec['duration'] = str(duration)
-        patch.status['diffs'].update({'openstack.domains': diffs})
+        changes = json.loads(patch.status['changes'])
+        changes.update({'domains': diffs})
+        patch.status['changes'] = json.dumps(changes)
     except Exception as error:
         patch.status['state'] = "failed"
-        patch.status['error'].update({'openstack.domains': str(error)})
+        errors = json.loads(patch.status['error'])
+        errors.update({'openstack.domains': str(error)})
+        patch.status['error'] = json.dumps(errors)
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     logging.info('DONE seeding {} == > domains'.format(name))
 
