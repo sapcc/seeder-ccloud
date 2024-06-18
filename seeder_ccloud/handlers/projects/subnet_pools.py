@@ -101,7 +101,7 @@ class Subnet_Pools():
             diff = DeepDiff(resource.get('prefixes', []), subnet_pool.get('prefixes', []))
             if diff:
                 self.diffs[subnet_pool['name']].append(f"{list(diff.keys())[0]}: {list(diff.values())[0]}")
-                logging.info(f"network {subnet_pool['name']} differs: {diff}")
+                logging.info(f"subnetpool {subnet_pool['name']} differs: {diff}")
 
             for attr in list(subnet_pool.keys()):
                 if attr != 'prefixes':
