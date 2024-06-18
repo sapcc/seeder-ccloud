@@ -34,10 +34,10 @@ spec:
           priority: 0
           jsonPath: .status.state
           description: As returned from the handler (sometimes).
-        - name: Error
+        - name: LatestError
           type: string
           priority: 0
-          jsonPath: .status.error
+          jsonPath: .status.latest_error
           description: Error message if the seed failed.
         - name: Changes
           type: string

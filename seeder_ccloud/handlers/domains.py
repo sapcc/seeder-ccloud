@@ -25,11 +25,10 @@ config = utils.Config()
 
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
-def validate_domains(memo: kopf.Memo, patch: kopf.Patch, dryrun, spec, old, warnings: List[str], **_):
+def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
     domains = spec['openstack'].get('domains', [])
     for domain in domains:
         if 'name' not in domain or not domain['name']:
-            patch.status['error'].append({'message': str("domains must have a name"), 'handler': 'openstack.domains'})
             raise kopf.AdmissionError("Domains must have a name if present..")
     
     if dryrun and domains:
@@ -56,15 +55,33 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
         duration = time.time() - start
         patch.status['state'] = "seeded"
         patch.spec['duration'] = str(duration)
-        changes = json.loads(patch.status['changes'])
-        changes.update({'domains': diffs})
-        patch.status['changes'] = json.dumps(changes)
+        if not 'changes' in patch.status:
+            patch.status['changes'] =  json.dumps({"openstack.domains": len(diffs.keys())})
+        else:
+            try:
+                changes = json.loads(patch.status['changes'])
+                changes.update({'domains': len(diffs.keys())})
+                patch.status['changes'] = json.dumps(changes)
+            except Exception as error:
+                logging.error('error updating changes: {}'.format(str(error)))
+        if 'latest_error' in patch.status:
+            latest_error = json.loads(patch.status['latest_error'])
+            if 'openstack.domains' in latest_error:
+                del latest_error['openstack.domains']
+                patch.status['latest_error'] = json.dumps(latest_error)
     except Exception as error:
         patch.status['state'] = "failed"
-        errors = json.loads(patch.status['error'])
-        errors.update({'openstack.domains': str(error)})
-        patch.status['error'] = json.dumps(errors)
+        if not 'latest_error' in patch.status:
+            patch.status['latest_error'] = json.dumps({'openstack.domains': str(error)})
+        else:
+            try:
+                latest_error = json.loads(patch.status['latest_error'])
+                latest_error.update({'openstack.domains': str(error)})
+                patch.status['latest_error'] = json.dumps(latest_error)
+            except Exception as error:
+                logging.error('error updating latest_error: {}'.format(str(error)))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
+    
     logging.info('DONE seeding {} == > domains'.format(name))
 
 
