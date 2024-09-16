@@ -13,26 +13,35 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta, datetime
 from deepdiff import DeepDiff
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
+import helper
 
 config = utils.Config()
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.groups')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.groups')
-def seed_groups_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_groups_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
     logging.info('seeding {} groups'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
-        Groups(memo['args'], memo['dry_run']).seed(changed)
+        diffs = Groups(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('groups', patch, 'seeded', duration=duration, changes=diffs)
+        logging.info('seeding {} groups done'.format(name))
     except Exception as error:
+        logging.error('error seeding {}: {}'.format(name, error))
+        utils.setStatusFields('groups', patch, 'seeded', duration=duration, changes=diffs)
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
-
+    finally:
+        patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
 class Groups():
     def __init__(self, args, dry_run=False):
@@ -42,13 +51,16 @@ class Groups():
 
 
     def seed(self, groups):
+        self.diffs = {}
         for group in groups:
             self._seed_groups(group)
         self.resolve_group_members()
+        return self.diffs
 
 
     def _seed_groups(self, group):
         """ seed keystone groups """
+        self.diffs[group['name']] = []
         domain_name = group['domain']
         domain_id = self.openstack.get_domain_id(domain_name)
         
@@ -65,6 +77,7 @@ class Groups():
             logging.info(
                 "create group '%s/%s'" % (domain_name, group['name']))
             if not self.dry_run:
+                self.diffs[group['name']].append('create')
                 resource = keystone.groups.create(domain=domain_id, **group)
         else:
             resource = result[0]
@@ -72,6 +85,7 @@ class Groups():
             if 'values_changed' in diff:
                 logging.debug("group %s differs: '%s'" % (group['name'], diff))
                 if not self.dry_run:
+                    self.diffs[group['name']].append(diff['values_changed'])
                     keystone.groups.update(resource.id, **group)
 
         if users:
