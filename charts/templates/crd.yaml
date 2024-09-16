@@ -27,7 +27,7 @@ spec:
         - name: Duration
           type: string
           priority: 0
-          jsonPath: .spec.duration
+          jsonPath: .status.duration
           description: For how long the seed was running.
         - name: State
           type: string
