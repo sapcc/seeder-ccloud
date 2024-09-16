@@ -19,7 +19,6 @@ from deepdiff import DeepDiff
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
-import helper
 
 config = utils.Config()
 
