@@ -111,9 +111,14 @@ class Domains():
         try:
             result = keystone.domain_configs.get(domain)
             diff = DeepDiff(result.to_dict(), driver, exclude_obj_callback=utils.diff_exclude_password_callback)
-            if 'values_changed' in diff:
-                self.diffs[domain.name+'_config'].append(diff['values_changed'])
-                logging.info("domain_config %s differs: '%s'" % (domain.name, diff['values_changed']))
+            if diff:
+                if 'values_changed' in diff:
+                    self.diffs[domain.name+'_config'].append(diff['values_changed'])
+                if  'dictionary_item_added' in diff:
+                    self.diffs[domain.name+'_config'].append(diff['dictionary_item_added'])
+                if 'dictionary_item_removed' in diff:
+                    self.diffs[domain.name+'_config'].append(diff['dictionary_item_removed']) 
+                logging.info("domain_config %s differs: '%s'" % (domain.name, diff))
                 if not self.dry_run:
                     logging.info('update domain config %s' % domain.name)
                     keystone.domain_configs.update(domain, driver)
