@@ -14,7 +14,9 @@
  limitations under the License.
 """
 
-import copy, sys, os
+import copy, sys
+import kopf, json
+from datetime import datetime
 import difflib
 import pprint
 import json
@@ -29,6 +31,7 @@ class Config:
     prefix = None
     args = None
     operator_version = None
+    handlers = None
 
     def __new__(cls):
         if not cls._singleton:
@@ -40,6 +43,7 @@ class Config:
             
             cls.prefix = 'seeder.ccloud'
             cls.operator_version = config.get('operator', 'version')
+            cls.handlers = config.get('operator', 'handlers').split(',')
             cls.crd_info = {
                 'version': config.get('crd_names', 'version'),
                 'group': config.get('crd_names', 'group'),
@@ -123,3 +127,33 @@ def get_changed_seeds(old, new):
         changed = [i for i in new_copy if i not in old_copy]
     
     return changed
+
+def setStatusFields(handler: str, patch: kopf.Patch, state: str, duration: int = 0, latest_error: str = None, diffs: dict = None):
+    patch.status['state'] = state
+    patch.status['duration'] = str(duration)
+    if duration in patch.status and patch.status['duration'] is not None:
+        patchDuration = datetime.strptime(patch.status['duration'], "%H:%M:%S.%f")
+        newDuration = patchDuration + duration
+        patch.status['duration'] = str(newDuration.time())
+    else:
+        if duration is not None:
+            patch.status['duration'] = str(duration)
+    if latest_error:
+        if 'latest_error' in patch.status:
+            err = json.loads(patch.status['latest_error']).update({handler: latest_error})
+            patch.status['latest_error'] = json.dumps(err)
+        else:
+            patch.status['latest_error'] = json.dumps({handler: latest_error})
+    else:
+        if 'latest_error' in patch.status:
+            latest_error = json.loads(patch.status['latest_error'])
+            if handler in latest_error:
+                del latest_error[handler]
+                patch.status['latest_error'] = json.dumps({handler: latest_error})
+    if diffs:
+        changes = {handler: sum([len(v) for v in diffs.values()])}
+        if 'changes' in patch.status:
+            mergedChanges = json.loads(patch.status['changes']).update(changes)
+            patch.status['changes'] = json.dumps(mergedChanges)
+        else:
+            patch.status['changes'] = json.dumps(changes)

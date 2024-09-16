@@ -14,7 +14,7 @@
  limitations under the License.
 """
 
-import logging, kopf, time, json
+import logging, kopf, time
 from datetime import timedelta, datetime
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -24,23 +24,15 @@ from typing import List
 
 config = utils.Config()
 
-
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
     domains = spec['openstack'].get('domains', [])
     for domain in domains:
         if 'name' not in domain or not domain['name']:
-            raise kopf.AdmissionError("Domains must have a name if present..")
-    
-    if dryrun and domains:
-        old_domains = None
-        if old is not None:
-            old_domains = old['spec']['openstack'].get('domains', None)
-        changed = utils.get_changed_seeds(old_domains, domains)
-        diffs = Domains(memo['args'], dryrun).seed(changed)
-        if diffs:
-            warnings.append({'domains': diffs})
-
+            raise kopf.AdmissionError("Domains must have a name")
+        if 'config' in domain:
+            if not isinstance(domain['config'], dict):
+                raise kopf.AdmissionError("Domain config must be a valid dict if present")
 
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
@@ -54,39 +46,15 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
         changed = utils.get_changed_seeds(old, new)
         diffs = Domains(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        patch.status['state'] = "seeded"
-        patch.spec['duration'] = str(duration)
-        if not 'changes' in patch.status:
-            patch.status['changes'] =  json.dumps({"openstack.domains": len(diffs.keys())})
-        else:
-            try:
-                changes = json.loads(patch.status['changes'])
-                changes.update({'domains': len(diffs.keys())})
-                patch.status['changes'] = json.dumps(changes)
-            except Exception as error:
-                logging.error('error updating changes: {}'.format(str(error)))
-        if 'latest_error' in patch.status:
-            latest_error = json.loads(patch.status['latest_error'])
-            if 'openstack.domains' in latest_error:
-                del latest_error['openstack.domains']
-                patch.status['latest_error'] = json.dumps(latest_error)
+        utils.setStatusFields('domains', patch, 'seeded', duration=duration, changes=diffs)
     except Exception as error:
-        patch.status['state'] = "failed"
-        if not 'latest_error' in patch.status:
-            patch.status['latest_error'] = json.dumps({'openstack.domains': str(error)})
-        else:
-            try:
-                latest_error = json.loads(patch.status['latest_error'])
-                latest_error.update({'openstack.domains': str(error)})
-                patch.status['latest_error'] = json.dumps(latest_error)
-            except Exception as error:
-                logging.error('error updating latest_error: {}'.format(str(error)))
+        logging.error('error seeding {}: {}'.format(name, error))
+        utils.setStatusFields('domains', patch, 'error', 0, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
-    
     finally:
         patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     
-    logging.info('successfully seeded {}: domains'.format(name))
+    logging.info('successfully seeded domains: {}'.format(name))
 
 
 class Domains():
@@ -125,7 +93,7 @@ class Domains():
             diff = DeepDiff(resource.to_dict(), domain)
             if 'values_changed' in diff:
                 self.diffs[domain['name']].append(diff['values_changed'])
-                logging.info("domain %s differs: '%s'" % (domain['name'], diff))
+                logging.info("domain %s differs: '%s'" % (domain['name'], diff['values_changed']))
                 if not self.dry_run:
                     logging.info("update domain '%s'" % domain['name'])
                     keystone.domains.update(resource.id, **domain)
@@ -145,7 +113,7 @@ class Domains():
             diff = DeepDiff(result.to_dict(), driver, exclude_obj_callback=utils.diff_exclude_password_callback)
             if 'values_changed' in diff:
                 self.diffs[domain.name+'_config'].append(diff['values_changed'])
-                logging.info("domain_config %s differs: '%s'" % (domain.name, diff))
+                logging.info("domain_config %s differs: '%s'" % (domain.name, diff['values_changed']))
                 if not self.dry_run:
                     logging.info('update domain config %s' % domain.name)
                     keystone.domain_configs.update(domain, driver)
