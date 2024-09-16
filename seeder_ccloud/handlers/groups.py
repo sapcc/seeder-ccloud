@@ -33,11 +33,11 @@ def seed_groups_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, anno
         changed = utils.get_changed_seeds(old, new)
         diffs = Groups(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        utils.setStatusFields('groups', patch, 'seeded', duration=duration, changes=diffs)
+        utils.setStatusFields('groups', patch, 'seeded', duration=duration, diffs=diffs)
         logging.info('seeding {} groups done'.format(name))
     except Exception as error:
         logging.error('error seeding {}: {}'.format(name, error))
-        utils.setStatusFields('groups', patch, 'seeded', duration=duration, changes=diffs)
+        utils.setStatusFields('groups', patch, 'error', 0, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     finally:
         patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')

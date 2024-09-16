@@ -46,7 +46,7 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
         changed = utils.get_changed_seeds(old, new)
         diffs = Domains(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        utils.setStatusFields('domains', patch, 'seeded', duration=duration, changes=diffs)
+        utils.setStatusFields('domains', patch, 'seeded', duration=duration, diffs=diffs)
     except Exception as error:
         logging.error('error seeding {}: {}'.format(name, error))
         utils.setStatusFields('domains', patch, 'error', 0, latest_error=str(error))
