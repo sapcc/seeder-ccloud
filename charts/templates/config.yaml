@@ -7,7 +7,7 @@ data:
   config.ini: |
     [operator]
     version = 1.0
-    handler = domains,groups,projects.projects,role_assignments,projects.networks,projects.subnet_pools,projects.address_scopes,projects.network_quotas
+    handlers = domains,groups,projects.projects,role_assignments,projects.networks,projects.subnet_pools,projects.address_scopes,projects.network_quotas
     [crd_names]
     version = v1
     group = seeder.cloud.sap
