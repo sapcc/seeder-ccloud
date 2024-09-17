@@ -130,7 +130,7 @@ class Address_Scopes():
                 resource = result['address_scope']
         else:
             resource = result['address_scopes'][0]
-            diff = DeepDiff(resource, scope)
+            diff = DeepDiff(resource, scope, threshold_to_diff_deeper=0)
             if 'values_changed' in diff:
                 self.diffs[scope['name']].append(diff['values_changed'])
                 logging.info(

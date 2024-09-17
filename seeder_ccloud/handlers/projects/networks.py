@@ -143,7 +143,7 @@ class Networks():
                 resource = result['network']
         else:
             resource = result['networks'][0]
-            diff = DeepDiff(resource, network)
+            diff = DeepDiff(resource, network, threshold_to_diff_deeper=0)
             if 'values_changed' in diff:
                 self.diffs[network['name']].append(diff['values_changed'])
                 logging.debug(f"network {network['name']} differs: {diff}")
@@ -233,7 +233,7 @@ class Networks():
                     neutron.create_subnet(body)
             else:
                 resource = result['subnets'][0]
-                diff = DeepDiff(resource, subnet)
+                diff = DeepDiff(resource, subnet, threshold_to_diff_deeper=0)
                 if 'values_changed' in diff:
                     self.diffs[network['name'] + '_subnet'].append(
                         diff['values_changed'])

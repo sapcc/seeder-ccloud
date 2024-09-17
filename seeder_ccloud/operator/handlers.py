@@ -1,10 +1,10 @@
 import logging
 import kopf
+import importlib
 from seeder_ccloud import utils
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 from kopf._cogs.structs import bodies
-
 
 class Handlers():
 
@@ -13,37 +13,36 @@ class Handlers():
         self.config = utils.Config()
 
     def setup(self):
-
         @kopf.on.create(
             self.config.crd_info['plural'],
             annotations={'operatorVersion': self.config.operator_version})
         @kopf.on.update(
             self.config.crd_info['plural'],
             annotations={'operatorVersion': self.config.operator_version})
-        def check_dependencies(spec, name, namespace, **kwargs):
+        def check_dependencies(spec, name, patch: kopf.Patch, namespace, **kwargs):
             requires = spec.get('requires', None)
             logging.info('checking dependencies for seed {}'.format(name))
+            patch.status['state'] = "seeding"
+            patch.status['changes'] = "{}"
+            patch.status['duration'] = str(0) 
             if not requires:
                 return
             if self.has_dependency_cycle(client, name, namespace, requires):
+                patch.status['state'] = "error"
+                patch.status['latest_error'] = "dependency cycle"
                 raise kopf.TemporaryError('dependency cycle', delay=300)
             try:
                 self.resolve_requires(client, requires)
             except kopf.TemporaryError as error:
+                patch.status['state'] = "error"
                 raise kopf.TemporaryError('{}'.format(error), delay=30)
             except Exception as error:
+                patch.status['state'] = "error"
                 raise kopf.TemporaryError('{}'.format(error), delay=30)
-
-        #import seeder_ccloud.handlers.regions
-        import seeder_ccloud.handlers.domains
-        import seeder_ccloud.handlers.groups
-        import seeder_ccloud.handlers.projects.projects
-        import seeder_ccloud.handlers.role_assignments
-        #import seeder_ccloud.handlers.flavors
-        import seeder_ccloud.handlers.projects.networks
-        import seeder_ccloud.handlers.projects.subnet_pools
-        import seeder_ccloud.handlers.projects.address_scopes
-        import seeder_ccloud.handlers.projects.network_quotas
+                
+        for handler in self.config.handlers:
+            logging.info('loading handler: seeder_ccloud.handlers.{}'.format(handler))
+            importlib.import_module('seeder_ccloud.handlers.{}'.format(handler))
 
     def has_dependency_cycle(self, k8s_client, seed_name, namespace, requires):
         if requires is None:

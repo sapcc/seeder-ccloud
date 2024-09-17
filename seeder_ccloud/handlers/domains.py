@@ -90,7 +90,7 @@ class Domains():
                 resource = keystone.domains.create(**domain)
         else:
             resource = result[0]
-            diff = DeepDiff(resource.to_dict(), domain)
+            diff = DeepDiff(resource.to_dict(), domain, threshold_to_diff_deeper=0)
             if 'values_changed' in diff:
                 self.diffs[domain['name']].append(diff['values_changed'])
                 logging.info("domain %s differs: '%s'" % (domain['name'], diff['values_changed']))
@@ -110,7 +110,7 @@ class Domains():
         # get the current domain configuration
         try:
             result = keystone.domain_configs.get(domain)
-            diff = DeepDiff(result.to_dict(), driver, exclude_obj_callback=utils.diff_exclude_password_callback)
+            diff = DeepDiff(result.to_dict(), driver, threshold_to_diff_deeper=0, exclude_obj_callback=utils.diff_exclude_password_callback)
             if diff:
                 if 'values_changed' in diff:
                     self.diffs[domain.name+'_config'].append(diff['values_changed'])

@@ -80,7 +80,7 @@ class Groups():
                 resource = keystone.groups.create(domain=domain_id, **group)
         else:
             resource = result[0]
-            diff = DeepDiff(group, resource.to_dict())
+            diff = DeepDiff(group, resource.to_dict(), threshold_to_diff_deeper=0)
             if 'values_changed' in diff:
                 logging.debug("group %s differs: '%s'" % (group['name'], diff))
                 if not self.dry_run:

@@ -118,7 +118,7 @@ class Flavors():
                     flavor_cmp['OS-FLV-EXT-DATA:ephemeral'] = flavor_cmp.pop('ephemeral')
 
                 # check for delta
-                diff = DeepDiff(flavor_cmp, resource.to_dict())
+                diff = DeepDiff(flavor_cmp, resource.to_dict(), threshold_to_diff_deeper=0)
                 if 'values_changed' in diff:
                     logging.info(
                         "deleting flavor '%s' to re-create, since it differs '%s'" %

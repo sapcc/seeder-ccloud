@@ -94,7 +94,7 @@ class Services():
                 resource = self.openstack.get_keystoneclient().services.create(**service)
         else:
             resource = result[0]
-            diff = DeepDiff(service, resource.to_dict())
+            diff = DeepDiff(service, resource.to_dict(), threshold_to_diff_deeper=0)
             if 'values_changed' in diff:
                 logging.debug("endpoint %s differs: '%s'" % (service['name'], diff))
                 if not self.dry_run:
@@ -123,7 +123,7 @@ class Services():
                 self.openstack.get_keystoneclient().endpoints.create(service.id, **endpoint)
             else:
                 resource = result[0]
-                diff = DeepDiff(resource, endpoint)
+                diff = DeepDiff(resource, endpoint, threshold_to_diff_deeper=0)
                 if len(diff.keys()) > 0:
                     logging.debug("endpoint %s differs: '%s'" % (endpoint['interface'], diff))
                     if not self.dry_run:

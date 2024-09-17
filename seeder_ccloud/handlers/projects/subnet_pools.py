@@ -98,7 +98,7 @@ class Subnet_Pools():
                 resource = result['subnetpools'][0]
         else:
             resource = result['subnetpools'][0]
-            diff = DeepDiff(resource.get('prefixes', []), subnet_pool.get('prefixes', []))
+            diff = DeepDiff(resource.get('prefixes', []), subnet_pool.get('prefixes', []), threshold_to_diff_deeper=0)
             if diff:
                 self.diffs[subnet_pool['name']].append(f"{list(diff.keys())[0]}: {list(diff.values())[0]}")
                 logging.info(f"subnetpool {subnet_pool['name']} differs: {diff}")

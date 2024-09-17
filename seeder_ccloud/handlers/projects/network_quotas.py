@@ -122,7 +122,7 @@ class Network_Quotas():
         else:
             resource = result['quota']
             new_quota = {}
-            diff = DeepDiff(resource, quota)
+            diff = DeepDiff(resource, quota, threshold_to_diff_deeper=0)
             if 'values_changed' in diff or 'dictionary_item_added' in diff:
                 self.diffs[network_quota['name']].append(
                     diff['values_changed'])
