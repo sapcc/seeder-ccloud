@@ -1,4 +1,5 @@
-FROM keppel.eu-de-1.cloud.sap/ccloud/ccloud-shell:20240911114114
+# TODO: find a better alternative than recycling the web shell image...
+FROM keppel.eu-de-1.cloud.sap/ccloud/ccloud-shell:latest
 LABEL MAINTAINER="Stefan Hipfel <stefan.hipfel@sap.com>"
 LABEL source_repository="https://github.com/sapcc/seeder-ccloud"
 
