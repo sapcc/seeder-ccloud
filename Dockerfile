@@ -5,29 +5,18 @@ LABEL source_repository="https://github.com/sapcc/seeder-ccloud"
 
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
-RUN echo 'precedence ::ffff:0:0/96  100' >> /etc/gai.conf && \
-    apt-get update && \
-    apt-get dist-upgrade -y && \
-    apt-get install -y --no-install-recommends ca-certificates curl && \
-    update-ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
-
 WORKDIR /operator
 COPY seeder_ccloud/ ./seeder_ccloud/
 COPY setup.py .
 
 ARG CUSTOM_PYPI_URL
-RUN apt-get update && \
-    ls && \
-    apt-get dist-upgrade -y && \
-    apt-get install -y --no-install-recommends build-essential pkg-config git openssl libssl-dev libyaml-dev libffi-dev python3 python3-pip python3-setuptools python3-dev && \
-    pip3 install --upgrade wheel && \
-    pip3 install --upgrade pip && \
-    pip3 install --upgrade setuptools && \
+RUN [ $CUSTOM_PYPI_URL != "" ] || { echo -e "\n\nCUSTOM_PYPI_URL must be set!\n\n"; exit 1; } && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    update-ca-certificates && \
     pip3 install --no-cache-dir --only-binary :all: --no-compile --extra-index-url ${CUSTOM_PYPI_URL} kubernetes-entrypoint && \
-    pip3 install . && \
-    apt-get purge -y --auto-remove build-essential git libssl-dev libffi-dev libyaml-dev && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+    pip3 install --no-cache-dir . && \
+    apt-get purge -y --auto-remove build-essential && \
+    rm -rf /var/lib/apt/lists/* build/ /root/.bash_aliases
 
 CMD ["seeder_ccloud"]
