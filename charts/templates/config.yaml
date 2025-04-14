@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ccloud-seeder
-  namespace: monsoon3
+  namespace: {{ .Release.Namespace }}
 data:
   config.ini: |
     [operator]

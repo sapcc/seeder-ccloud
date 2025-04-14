@@ -6,6 +6,7 @@ ccloud_seeder:
 operator:
   dry_run: true
   log_level: INFO
+  namespacePatterns: "*"
 
 global:
   linkerd_requested: false

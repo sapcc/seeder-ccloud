@@ -4,17 +4,17 @@ metadata:
   annotations:
     kubernetes.io/tls-acme: "true"
     meta.helm.sh/release-name: {{ .Release.Name }}
-    meta.helm.sh/release-namespace: monsoon3
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
     {{- include "utils.linkerd.ingress_annotation" . | indent 4 }}
     disco: "true"
   labels:
     app: ccloud-seeder
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
   name: ccloud-seeder-webhook
-  namespace: monsoon3
+  namespace: {{ .Release.Namespace }}
 spec:
   rules:
-  - host: ccloud-seeder.{{ .Values.global.region }}.cloud.sap
+  - host: {{ .Release.Name }}.{{ .Values.global.region }}.cloud.sap
     http:
       paths:
         - path: /
@@ -26,5 +26,5 @@ spec:
                 number: 80
   tls:
   - hosts:
-    - ccloud-seeder.{{ .Values.global.region }}.cloud.sap
-    secretName: tls-ccloud-seeder-{{ .Values.global.region }}-cloud-sap
+    - {{ .Release.Name }}.{{ .Values.global.region }}.cloud.sap
+    secretName: tls-{{ .Release.Name }}-{{ .Values.global.region }}-cloud-sap

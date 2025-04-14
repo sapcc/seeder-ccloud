@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: ccloud-seeder
-  namespace: monsoon3
+  namespace: {{ .Release.Namespace }}
   labels:
     type: operator
     service: ccloud-seeder

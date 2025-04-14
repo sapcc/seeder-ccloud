@@ -37,6 +37,7 @@ spec:
         {{- end }}
           - --log={{ .Values.operator.log_level }}
           - --config-file=/etc/operator/config.ini
+          - --namespace-patterns={{ .Values.operator.namespacePatterns }}
         volumeMounts:
           - name: config
             mountPath: /etc/operator
