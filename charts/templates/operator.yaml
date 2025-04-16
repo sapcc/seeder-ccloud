@@ -2,7 +2,6 @@ apiVersion: "apps/v1"
 kind: Deployment
 metadata:
   labels:
-    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     app: ccloud-seeder
   name: ccloud-seeder

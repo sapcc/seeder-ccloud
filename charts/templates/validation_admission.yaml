@@ -1,25 +1,19 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: seeder.cloud.sap
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    meta.helm.sh/release-name: {{ .Release.Name }}
-    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+  name: {{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
   labels:
     app: ccloud-seeder
-    app.kubernetes.io/managed-by: Helm
-    chart: ccloud-seeder-0.0.1
     release: {{ .Release.Name }}
 webhooks:
 - admissionReviewVersions:
   - v1
   - v1beta1
   clientConfig:
-    url: https://{{ .Release.Name }}.{{ .Values.global.region }}.cloud.sap/validate_domains/spec.openstack.domains
+    url: https://{{ .Values.ccloud_seeder.domainPrefix }}.{{ .Values.global.region }}.cloud.sap/validate_domains/spec.openstack.domains
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: validate-domains.spec.openstack.domains.seeder.cloud.sap
+  name: validate-domains.spec.openstack.domains.{{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
   namespaceSelector: {}
   objectSelector: {}
   rules:
@@ -38,10 +32,10 @@ webhooks:
   - v1
   - v1beta1
   clientConfig:
-    url: https://{{ .Release.Name }}.{{ .Values.global.region }}.cloud.sap/validate_networks/spec.openstack.networks
+    url: https://{{ .Values.ccloud_seeder.domainPrefix }}.{{ .Values.global.region }}.cloud.sap/validate_networks/spec.openstack.networks
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: validate-networks.spec.openstack.networks.seeder.cloud.sap
+  name: validate-networks.spec.openstack.networks.{{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
   namespaceSelector: {}
   objectSelector: {}
   rules:
@@ -60,10 +54,10 @@ webhooks:
   - v1
   - v1beta1
   clientConfig:
-    url: https://{{ .Release.Name }}.{{ .Values.global.region }}.cloud.sap/validate_networks/spec.openstack.address_scopes
+    url: https://{{ .Values.ccloud_seeder.domainPrefix }}.{{ .Values.global.region }}.cloud.sap/validate_networks/spec.openstack.address_scopes
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: validate-address-scopes.spec.openstack.address-scopes.seeder.cloud.sap
+  name: validate-address-scopes.spec.openstack.address-scopes.{{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
   namespaceSelector: {}
   objectSelector: {}
   rules:
