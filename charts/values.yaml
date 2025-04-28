@@ -2,10 +2,12 @@ ccloud_seeder:
   image:
     name: ccloud-seeder
     tag: latest
+  domainPrefix: ccloud-seeder
 
 operator:
   dry_run: true
   log_level: INFO
+  namespacePatterns: "*"
 
 global:
   linkerd_requested: false

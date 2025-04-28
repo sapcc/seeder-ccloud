@@ -1,7 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: ccloud-seeder
+  # the setup we need to have here is tricky:
+  # we need to have a cluster role, in order to be able to access the CRDs of all namespaces
+  # on application layer, we only deploy the resources which belong to this environment with "namespace-patterns"
+  # for a global-enabled region, we make multiple deployments of the seeder, so we get a clash of the cluster roles
+  # therefore, we use the Release-name here as name, so we get cluster roles distinct per deployment
+  name: {{ .Release.Name }}
 rules:
 
   # Framework: knowing which other operators are running (i.e. peering).
@@ -30,7 +35,6 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  namespace: "monsoon3"
   name: ccloud-seeder-namespaced
 rules:
 
@@ -61,20 +65,19 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: ccloud-seeder-cluster
+  name: {{ .Release.Name }}-cluster
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: ccloud-seeder
+  name: {{ .Release.Name }}
 subjects:
   - kind: ServiceAccount
     name: ccloud-seeder
-    namespace: "monsoon3"
+    namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  namespace: "monsoon3"
   name: ccloud-seeder-namespaced
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -83,3 +86,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: ccloud-seeder
+    namespace: {{ .Release.Namespace }}
