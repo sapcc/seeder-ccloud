@@ -60,6 +60,9 @@ Seeding currently only supports creating or updating of entities (upserts).
     - role-assignments
     - users
     - roles
+    - identity_providers
+        - protocols (nested under identity provider)
+    - federation_mappings
     - swift 
         - account
         - containers
@@ -168,3 +171,28 @@ Example seed spec of a keystone seed to be deployed via helm:
             description: Administrator Project
         - name: service
             description: Services Project
+
+Example seed spec for SAML federation (identity providers and mappings).
+The ``rules`` field is an opaque JSON string following the Keystone federation
+mapping API format (see https://docs.openstack.org/keystone/latest/admin/federation/mapping_combinations.html).
+It is passed through to the Keystone API as-is and must not be written as YAML:
+
+    apiVersion: "seeder.cloud.sap/v1"
+    kind: "CcloudSeed"
+    metadata:
+      name: saml-federation-mandant-a
+    spec:
+      openstack:
+        federation_mappings:
+        - id: mandant-a-mapping
+          schema_version: "2.0"
+          rules: '[{"local": [{"user": {"name": "{0}", "domain": {"name": "mandant-a"}}}], "remote": [{"type": "REMOTE_USER"}]}]'
+        identity_providers:
+        - id: mandant-a
+          description: "SAML IdP for tenant mandant-a"
+          enabled: true
+          remote_ids:
+          - https://idp.mandant-a.example.com/saml2/metadata
+          protocols:
+          - id: saml2
+            mapping_id: mandant-a-mapping
