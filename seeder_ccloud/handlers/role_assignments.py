@@ -85,16 +85,16 @@ class Role_Assignments():
         domain_id = self.openstack.get_domain_id(domain)
         role_assignment['domain'] = domain_id
         if 'user' in assignment:
-            user = assignment['user']
-            id = self.openstack.get_user_id(domain, user)
+            user, user_domain = assignment['user'].split('@', 1) if '@' in assignment['user'] else (assignment['user'], domain)
+            id = self.openstack.get_user_id(user_domain, user)
             if not id:
                 raise Exception(
                     "user %s not found, skipping role assignment.." %
                     assignment['user'])
             role_assignment['user'] = id
         elif 'group' in assignment:
-            group = assignment['group']
-            id = self.openstack.get_group_id(domain, group)
+            group, group_domain = assignment['group'].split('@', 1) if '@' in assignment['group'] else (assignment['group'], domain)
+            id = self.openstack.get_group_id(group_domain, group)
             if not id:
                 raise Exception(
                     "group %s not found, skipping role assignment.." %
@@ -104,8 +104,8 @@ class Role_Assignments():
             role_assignment['system'] = assignment['system']
         else:
             if 'project' in assignment:
-                project = assignment['project']
-                id = self.openstack.get_project_id(domain, project)
+                project, project_domain = assignment['project'].split('@', 1) if '@' in assignment['project'] else (assignment['project'], domain)
+                id = self.openstack.get_project_id(project_domain, project)
                 if not id:
                     raise Exception(
                         "project %s not found, skipping role assignment.." %
