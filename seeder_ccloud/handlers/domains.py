@@ -18,6 +18,7 @@ import logging, kopf, time
 from datetime import timedelta, datetime
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
+from seeder_ccloud.handlers.users import Users
 from deepdiff import DeepDiff
 from keystoneclient import exceptions
 from typing import List
@@ -76,6 +77,7 @@ class Domains():
         self.diffs[domain['name']] = []
         #get all changed sub_seeds
         driver = domain.pop('config', None)
+        users = domain.pop('users', [])
 
         # grab a keystone client
         keystone = self.openstack.get_keystoneclient()
@@ -100,6 +102,9 @@ class Domains():
 
         if driver:
             self._seed_domain_config(resource, driver)
+
+        if users:
+            Users(self.args, self.dry_run).seed(users)
 
 
     def _seed_domain_config(self, domain, driver):
