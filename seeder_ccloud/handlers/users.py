@@ -20,6 +20,7 @@ from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
 
+@kopf.on.resume(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.users')
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.users')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.users')
 def seed_domain_users_handler(memo: kopf.Memo, new, old, name, annotations, **_):
