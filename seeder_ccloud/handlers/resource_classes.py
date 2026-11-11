@@ -56,3 +56,4 @@ class Resource_Classes():
                 _ = self.openstack.get_placementclient(api_version='1.7').request('PUT', PER_CLASS_URL.format(name=resource_class))
         except Exception as e:
             logging.error("Failed to seed resource-class %s: %s" % (resource_class, e))
+            raise

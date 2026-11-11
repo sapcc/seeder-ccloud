@@ -190,6 +190,7 @@ class Projects():
             logging.error(
                 "could not seed designate quota for project %s: %s" % (
                     project.name, e))
+            raise
 
 
     def seed_project_tsig_keys(self, project, keys):
@@ -232,6 +233,7 @@ class Projects():
         except Exception as e:
             logging.error("could not seed project dns tsig keys %s: %s" % (
                 project.name, e))
+            raise
 
 
     def seed_project_ec2_creds(self, project, domain_name, creds):
@@ -250,7 +252,7 @@ class Projects():
             keystone = self.openstack.get_keystoneclient()
         except Exception as e:
             logging.error("Couldn't get keystone client")
-            return
+            raise
 
         for cred in creds:
             cred = self.openstack.sanitize(cred, ('user', 'user_domain', 'access', 'key'))
@@ -273,6 +275,7 @@ class Projects():
                 return
             except Exception as e:
                 logging.error("Could not seed ec2 credentials")
+                raise
 
 
     def seed_project_share_types(self, project, share_types, args, sess):

@@ -50,7 +50,7 @@ def validate_role_assignments(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
-def seed_role_assignments_handler(memo: kopf.Memo,  patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_role_assignments_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} role_assignments'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -62,13 +62,12 @@ def seed_role_assignments_handler(memo: kopf.Memo,  patch: kopf.Patch, new, old,
             raise kopf.TemporaryError('error seeding {}: waiting for domains handler to succeed'.format(name), delay=30)
     try:
         starttime = time.perf_counter()
-        changed = utils.get_changed_seeds(old, new)
+        changed = utils.get_changed_seeds(old, new, force=True)
         Role_Assignments(memo['args']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        patch.status['state'] = "seeded"
-        patch.spec['duration'] = str(duration)
+        utils.setStatusFields('role_assignments', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
-        patch.status['state'] = "failed"
+        utils.setStatusFields('role_assignments', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 

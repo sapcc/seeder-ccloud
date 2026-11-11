@@ -73,7 +73,7 @@ class Config:
                             default='INFO')
         parser.add_argument('--dry-run', default=False, action='store_true',
                             help='Only parse the seed, do no actual seeding.')
-        parser.add_argument('--max-workers', default=1, dest="max_workers",
+        parser.add_argument('--max-workers', default=5, dest="max_workers",
                             help='Max workers for the kopf operator.')
         parser.add_argument("--namespace-patterns", dest="namespaces",
                             help="list of namespace patterns. default is cluster wide",
@@ -117,16 +117,12 @@ def sanitize_dict(source, keys):
     return result
 
 
-def get_changed_seeds(old, new):
+def get_changed_seeds(old, new, force=False):
     new_copy = copy.deepcopy(new)
     old_copy = copy.deepcopy(old)
-    changed = []
-    if old is None:
-        changed = new_copy
-    else:
-        changed = [i for i in new_copy if i not in old_copy]
-    
-    return changed
+    if old is None or force:
+        return new_copy
+    return [i for i in new_copy if i not in old_copy]
 
 def setStatusFields(handler: str, patch: kopf.Patch, state: str, status: dict = None, duration: int = 0, latest_error: str = None, diffs: dict = None):
     patch.status['state'] = state
