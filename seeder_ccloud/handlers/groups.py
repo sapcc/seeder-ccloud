@@ -101,10 +101,10 @@ class Groups():
     def resolve_group_members(self):
         for group, users in self.group_members.items():
             logging.debug("resolving group members %s %s" % (group, users))
-            keystoneclient = self.get_keystoneclient()
+            keystoneclient = self.openstack.get_keystoneclient()
             for uid in users:
                 username, domain = uid.split('@')
-                user = self.get_user_id(domain, username, keystoneclient)
+                user = self.openstack.get_user_id(domain, username)
                 if user:
                     try:
                         keystoneclient.users.check_in_group(user, group)

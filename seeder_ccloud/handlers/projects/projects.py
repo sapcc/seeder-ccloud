@@ -228,7 +228,8 @@ class Projects():
                     logging.info(
                         "create dns tsig key '%s/%s'" % (
                             project.name, key['name']))
-                    designate.tsigkeys.create(key.pop('name'), **key)
+                    name = key.pop('name')
+                    designate.tsigkeys.create(name, **key)
 
         except Exception as e:
             logging.error("could not seed project dns tsig keys %s: %s" % (

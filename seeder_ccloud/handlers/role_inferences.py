@@ -40,7 +40,7 @@ def seed_role_inferences_handler(memo: kopf.Memo, new, old, name, annotations, *
 
     try:
         changed = utils.get_changed_seeds(old, new)
-        Role_Inferences(memo['args', memo['dry_run']]).seed(changed)
+        Role_Inferences(memo['args'], memo['dry_run']).seed(changed)
     except Exception as error:
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 

@@ -52,7 +52,7 @@ class Quota_Class_Sets():
 
         try:
             if not self.dry_run:
-                resp = self.openstack.get_session().post('/os-quota-class-sets/' + quota_class,
+                resp = self.openstack.get_session(self.args).post('/os-quota-class-sets/' + quota_class,
                                 endpoint_filter={'service_type': 'compute',
                                                 'interface': 'public'},
                                 json=dict({"quota_class_set": quotas}))

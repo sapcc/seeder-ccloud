@@ -50,10 +50,10 @@ def validate_services(spec, dryrun, **_):
                     raise kopf.AdmissionError("Endpoint region must be vaild if present..")
 
 
-@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
-@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
-def seed_roles_handler(memo: kopf.Memo, new, old, name, annotations, **_):
-    logging.info('seeding {} roles'.format(name))
+@kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.services')
+@kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.services')
+def seed_services_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+    logging.info('seeding {} services'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
