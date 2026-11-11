@@ -219,4 +219,5 @@ class OpenstackHelper:
         plugin = cli.load_from_argparse_arguments(args)
         return session.Session(auth=plugin,
                             user_agent='openstack-seeder',
-                            verify=not args.insecure)
+                            verify=not args.insecure,
+                            timeout=30)

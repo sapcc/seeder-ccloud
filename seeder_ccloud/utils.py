@@ -128,32 +128,21 @@ def get_changed_seeds(old, new):
     
     return changed
 
-def setStatusFields(handler: str, patch: kopf.Patch, state: str, duration: int = 0, latest_error: str = None, diffs: dict = None):
+def setStatusFields(handler: str, patch: kopf.Patch, state: str, status: dict = None, duration: int = 0, latest_error: str = None, diffs: dict = None):
     patch.status['state'] = state
-    patch.status['duration'] = str(duration)
-    if duration in patch.status and patch.status['duration'] is not None:
-        patchDuration = datetime.strptime(patch.status['duration'], "%H:%M:%S.%f")
-        newDuration = patchDuration + duration
-        patch.status['duration'] = str(newDuration.time())
-    else:
-        if duration is not None:
-            patch.status['duration'] = str(duration)
+    if duration is not None:
+        patch.status['duration'] = str(duration)
     if latest_error:
-        if 'latest_error' in patch.status:
-            err = json.loads(patch.status['latest_error']).update({handler: latest_error})
-            patch.status['latest_error'] = json.dumps(err)
-        else:
-            patch.status['latest_error'] = json.dumps({handler: latest_error})
+        existing = json.loads((status or {}).get('latest_error', '{}') or '{}')
+        existing[handler] = latest_error
+        patch.status['latest_error'] = json.dumps(existing)
     else:
-        if 'latest_error' in patch.status:
-            latest_error = json.loads(patch.status['latest_error'])
-            if handler in latest_error:
-                del latest_error[handler]
-                patch.status['latest_error'] = json.dumps({handler: latest_error})
+        existing = json.loads((status or {}).get('latest_error', '{}') or '{}')
+        if handler in existing:
+            del existing[handler]
+        patch.status['latest_error'] = json.dumps(existing) if existing else None
     if diffs:
         changes = {handler: sum([len(v) for v in diffs.values()])}
-        if 'changes' in patch.status:
-            mergedChanges = json.loads(patch.status['changes']).update(changes)
-            patch.status['changes'] = json.dumps(mergedChanges)
-        else:
-            patch.status['changes'] = json.dumps(changes)
+        existing_changes = json.loads((status or {}).get('changes', '{}') or '{}')
+        existing_changes.update(changes)
+        patch.status['changes'] = json.dumps(existing_changes)

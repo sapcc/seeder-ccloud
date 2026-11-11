@@ -13,13 +13,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf, time
+import logging, kopf, time, json
 from datetime import timedelta
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
 config = utils.Config()
+
+DOMAINS_HANDLER_ANNOTATION = config.prefix + '/seed_domains_handler.spec.openstack.domains'
 
 @kopf.on.validate(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_assignments')
 def validate_role_assignments(spec, dryrun, **_):
@@ -52,6 +54,12 @@ def seed_role_assignments_handler(memo: kopf.Memo,  patch: kopf.Patch, new, old,
     logging.info('seeding {} role_assignments'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
+
+    domains_progress = annotations.get(DOMAINS_HANDLER_ANNOTATION)
+    if domains_progress:
+        progress = json.loads(domains_progress)
+        if not progress.get('success', False):
+            raise kopf.TemporaryError('error seeding {}: waiting for domains handler to succeed'.format(name), delay=30)
     try:
         starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)

@@ -38,7 +38,7 @@ def validate_domains(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.domains')
-def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {}: domains'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -47,10 +47,10 @@ def seed_domains_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, ann
         changed = utils.get_changed_seeds(old, new)
         diffs = Domains(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        utils.setStatusFields('domains', patch, 'seeded', duration=duration, diffs=diffs)
+        utils.setStatusFields('domains', patch, 'seeded', status=status, duration=duration, diffs=diffs)
     except Exception as error:
         logging.error('error seeding {}: {}'.format(name, error))
-        utils.setStatusFields('domains', patch, 'error', 0, latest_error=str(error))
+        utils.setStatusFields('domains', patch, 'error', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     finally:
         patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -135,3 +135,4 @@ class Domains():
         except Exception as e:
             logging.error(
                 'could not configure domain %s: %s' % (domain.name, e))
+            raise
