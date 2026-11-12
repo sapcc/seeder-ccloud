@@ -25,12 +25,12 @@ def validate(spec, dryrun, **_):
     for bgpvpn in bgpvpns:
         if 'name' not in bgpvpn or not bgpvpn['name']:
             raise kopf.AdmissionError("Router must have a name...")
-        if isinstance(bgpvpn.get('import_targets', []), list):
-            raise kopf.AdmissionError()
-        if isinstance(bgpvpn.get('export_targets', []), list):
-            raise kopf.AdmissionError()
-        if isinstance(bgpvpn.get('route_targets', []), list):
-            raise kopf.AdmissionError()
+        if not isinstance(bgpvpn.get('import_targets', []), list):
+            raise kopf.AdmissionError("import_targets must be a list if present.")
+        if not isinstance(bgpvpn.get('export_targets', []), list):
+            raise kopf.AdmissionError("export_targets must be a list if present.")
+        if not isinstance(bgpvpn.get('route_targets', []), list):
+            raise kopf.AdmissionError("route_targets must be a list if present.")
 
 
 
@@ -53,9 +53,9 @@ class Bgpvpns():
         self.dry_run = dry_run
 
 
-    def seed(self, endpoints):
-        for endpoint in endpoints:
-            self._seed_bgpvpns(endpoint)
+    def seed(self, bgpvpns):
+        for bgpvpn in bgpvpns:
+            self._seed_bgpvpn(bgpvpn)
 
 
     def _seed_bgpvpn(self, bgpvpn):
@@ -87,7 +87,7 @@ class Bgpvpns():
                 result = neutron.create_bgpvpn(body)
                 resource = result['bgpvpn']
             else:
-                resource = result['bgpvpn'][0]
+                resource = result['bgpvpns'][0]
                 for attr in list(bgpvpn.keys()):
                     if bgpvpn[attr] != resource.get(attr, ''):
                         logging.info(

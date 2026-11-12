@@ -44,7 +44,7 @@ def seed_flavors_handler(memo: kopf.Memo, new, old, spec, name, annotations, **_
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
         changed = utils.get_changed_seeds(old, new)
-        Flavors(memo['args'], memo['dry_run']).seed(changed)
+        Flavors(memo['args'], memo['dry_run']).seed(changed, spec)
     except Exception as error:
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
@@ -87,9 +87,11 @@ class Flavors():
 
         # seed the missing traits and resource_classes
         if 'resource_classes' in spec:
-            self.seeder.all_seedtypes['resource_classes'].seed(set(spec['resource_classes']) - resource_classes)
+            from seeder_ccloud.handlers.resource_classes import Resource_Classes
+            Resource_Classes(self.args, self.dry_run).seed(list(set(spec['resource_classes']) - resource_classes))
         if 'traits' in spec:
-            self.seeder.all_seedtypes['traits'].seed(set(spec['traits']) - traits)
+            from seeder_ccloud.handlers.traits import Traits
+            Traits(self.args, self.dry_run).seed(list(set(spec['traits']) - traits))
 
 
     def _seed_flavor(self, flavor):
