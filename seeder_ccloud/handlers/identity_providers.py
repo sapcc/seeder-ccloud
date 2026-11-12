@@ -17,6 +17,7 @@
 import logging, kopf, time
 from datetime import timedelta, datetime
 from deepdiff import DeepDiff
+from keystoneclient import exceptions
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
 
@@ -39,7 +40,7 @@ def validate_identity_providers(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.identity_providers')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.identity_providers')
-def seed_identity_providers_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_identity_providers_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} identity_providers'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -49,9 +50,9 @@ def seed_identity_providers_handler(memo: kopf.Memo, patch: kopf.Patch, new, old
         changed = utils.get_changed_seeds(old, new)
         diffs = IdentityProviders(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        utils.setStatusFields('identity_providers', patch, 'seeded', duration=duration, diffs=diffs)
+        utils.setStatusFields('identity_providers', patch, 'seeded', status=status, duration=duration, diffs=diffs)
     except Exception as error:
-        utils.setStatusFields('identity_providers', patch, 'error', 0, latest_error=str(error))
+        utils.setStatusFields('identity_providers', patch, 'error', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     finally:
         patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -97,7 +98,7 @@ class IdentityProviders():
                 self.diffs[idp_id] = str(diff)
                 if not self.dry_run:
                     keystone.federation.identity_providers.update(idp_id, **idp_data)
-        except Exception:
+        except exceptions.NotFound:
             # IdP does not exist, create it
             logging.info("create identity provider '%s'" % idp_id)
             self.diffs[idp_id] = 'created'
@@ -125,7 +126,7 @@ class IdentityProviders():
                     if not self.dry_run:
                         keystone.federation.protocols.update(
                             idp_id, protocol_id, mapping_id)
-            except Exception:
+            except exceptions.NotFound:
                 # Protocol does not exist, create it
                 logging.info("create protocol '%s/%s' with mapping '%s'" % (
                     idp_id, protocol_id, mapping_id))

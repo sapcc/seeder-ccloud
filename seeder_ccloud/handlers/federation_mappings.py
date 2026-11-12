@@ -17,6 +17,7 @@
 import json, logging, kopf, time
 from datetime import timedelta, datetime
 from deepdiff import DeepDiff
+from keystoneclient import exceptions
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
 
@@ -43,7 +44,7 @@ def validate_federation_mappings(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.federation_mappings')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.federation_mappings')
-def seed_federation_mappings_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_federation_mappings_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} federation_mappings'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -53,9 +54,9 @@ def seed_federation_mappings_handler(memo: kopf.Memo, patch: kopf.Patch, new, ol
         changed = utils.get_changed_seeds(old, new)
         diffs = FederationMappings(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        utils.setStatusFields('federation_mappings', patch, 'seeded', duration=duration, diffs=diffs)
+        utils.setStatusFields('federation_mappings', patch, 'seeded', status=status, duration=duration, diffs=diffs)
     except Exception as error:
-        utils.setStatusFields('federation_mappings', patch, 'error', 0, latest_error=str(error))
+        utils.setStatusFields('federation_mappings', patch, 'error', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
     finally:
         patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -107,7 +108,7 @@ class FederationMappings():
                 if not self.dry_run:
                     keystone.federation.mappings.update(
                         mapping_id, rules=rules, schema_version=schema_version)
-        except Exception:
+        except exceptions.NotFound:
             # Mapping does not exist, create it
             logging.info("create federation mapping '%s'" % mapping_id)
             self.diffs[mapping_id] = 'created'
