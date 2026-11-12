@@ -21,6 +21,7 @@ import logging
 from kubernetes import config as k8s_config
 from seeder_ccloud import utils
 from seeder_ccloud.operator.handlers import Handlers
+from seeder_ccloud.operator.progress import SeedProgressStorage
 
 
 config = utils.Config()
@@ -50,7 +51,7 @@ def startup(settings: kopf.OperatorSettings, **kwargs):
     logging.info('starting operator with {} workers and crd {}'.format(int(args.max_workers), config.crd_info))
     settings.execution.max_workers = int(args.max_workers)
     settings.persistence.diffbase_storage = operator_storage
-    settings.persistence.progress_storage = kopf.AnnotationsProgressStorage(prefix=config.prefix)
+    settings.persistence.progress_storage = SeedProgressStorage(prefix=config.prefix)
 
 
 def setup_logging(logLevel):
