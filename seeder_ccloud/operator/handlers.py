@@ -1,3 +1,4 @@
+import json
 import logging
 import kopf
 import importlib
@@ -5,6 +6,8 @@ from seeder_ccloud import utils
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 from kopf._cogs.structs import bodies
+
+RETRY_INTERVAL = 600  # retry failed seeds every 10 minutes
 
 class Handlers():
 
@@ -40,6 +43,24 @@ class Handlers():
                 patch.status['state'] = "error"
                 raise kopf.TemporaryError('{}'.format(error), delay=30)
                 
+        @kopf.on.timer(
+            self.config.crd_info['plural'],
+            annotations={'operatorVersion': self.config.operator_version},
+            interval=RETRY_INTERVAL, idle=RETRY_INTERVAL)
+        def retry_failed(status, name, body, patch, **kwargs):
+            if status.get('state') != 'failed':
+                return
+            logging.info('retrying failed seed {}'.format(name))
+            prefix = self.config.prefix + '/'
+            for key, value in (body.get('metadata') or {}).get('annotations', {}).items():
+                if not key.startswith(prefix) or key == prefix + 'last-applied-configuration':
+                    continue
+                try:
+                    if not json.loads(value).get('success', True):
+                        patch.metadata.annotations[key] = None
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+
         for handler in self.config.handlers:
             logging.info('loading handler: seeder_ccloud.handlers.{}'.format(handler))
             importlib.import_module('seeder_ccloud.handlers.{}'.format(handler))
