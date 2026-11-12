@@ -14,7 +14,8 @@
  limitations under the License.
 """
 
-import kopf, logging
+import kopf, logging, time
+from datetime import timedelta
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
 from deepdiff import DeepDiff
@@ -38,14 +39,18 @@ def validate_flavors(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.flavors')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.flavors')
-def seed_flavors_handler(memo: kopf.Memo, new, old, spec, name, annotations, **_):
+def seed_flavors_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, spec, name, annotations, **_):
     logging.info('seeding {} flavor'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Flavors(memo['args'], memo['dry_run']).seed(changed, spec)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('flavors', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('flavors', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 

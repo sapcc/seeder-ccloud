@@ -62,7 +62,7 @@ def validate_networks(memo: kopf.Memo, dryrun, spec, old, warnings: List[str],
 @kopf.on.create(config.crd_info['plural'],
                 annotations={'operatorVersion': config.operator_version},
                 field='spec.openstack.networks')
-def seed_networks_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_networks_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.debug(f"seeding {name} networks")
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError(
@@ -72,10 +72,9 @@ def seed_networks_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, an
         changed = utils.get_changed_seeds(old, new)
         Networks(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        patch.status['state'] = "seeded"
-        patch.spec['duration'] = str(duration)
+        utils.setStatusFields('networks', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
-        patch.status['state'] = "failed"
+        utils.setStatusFields('networks', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
     finally:
         patch.status['latest_reconcile'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
