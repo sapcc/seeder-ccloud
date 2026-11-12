@@ -49,7 +49,7 @@ class DNS_Zones():
 
     def seed(self, dns_zones):
         for dns_zone in dns_zones:
-            self._seed_endpoint(dns_zone)
+            self._seed_dns_zone(dns_zone)
 
 
     def _seed_dns_zone(self, zone):
@@ -67,7 +67,7 @@ class DNS_Zones():
         designate = self.openstack.get_designateclient(project_id)
         recordsets = zone.pop('recordsets', None)
 
-        zone = self.sanitize(zone, (
+        zone = self.openstack.sanitize(zone, (
             'name', 'email', 'ttl', 'description', 'masters',
             'type'))
 
@@ -92,7 +92,7 @@ class DNS_Zones():
                                             **zone)
 
         if recordsets:
-            self.seed_dns_zone_recordsets(resource, recordsets)
+            self.seed_dns_zone_recordsets(resource, recordsets, project_id)
 
 
     def seed_dns_zone_recordsets(self, zone, recordsets, project_id):

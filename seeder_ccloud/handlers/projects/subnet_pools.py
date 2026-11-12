@@ -95,7 +95,7 @@ class Subnet_Pools():
             self.diffs[subnet_pool['name']].append('create')
             if not self.dry_run:
                 result = neutron.create_subnetpool(body)
-                resource = result['subnetpools'][0]
+                resource = result['subnetpool']
         else:
             resource = result['subnetpools'][0]
             diff = DeepDiff(resource.get('prefixes', []), subnet_pool.get('prefixes', []), threshold_to_diff_deeper=0)

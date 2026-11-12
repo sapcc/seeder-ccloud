@@ -80,8 +80,7 @@ class Projects():
 
             # resolve parent project if specified
             if 'parent' in project:
-                parent_id = self.openstack.get_project_id(domain_name, project['parent'],
-                                        keystone)
+                parent_id = self.openstack.get_project_id(domain_name, project['parent'])
                 if not parent_id:
                     logging.warn(
                         "skipping project '%s/%s', since its parent project is missing" % (
@@ -279,7 +278,7 @@ class Projects():
                 raise
 
 
-    def seed_project_share_types(self, project, share_types, args, sess):
+    def seed_project_share_types(self, project, share_types):
         """
         seed a project share types
         """

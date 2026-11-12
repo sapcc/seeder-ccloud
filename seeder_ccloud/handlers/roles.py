@@ -32,7 +32,7 @@ def validate_roles(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.roles')
-def seed_roles_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annotations, **_):
+def seed_roles_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} roles'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
@@ -42,10 +42,9 @@ def seed_roles_handler(memo: kopf.Memo, patch: kopf.Patch, new, old, name, annot
         changed = utils.get_changed_seeds(old, new)
         Roles(memo['args'], memo['dry_run']).seed(changed)
         duration = timedelta(seconds=time.perf_counter()-starttime)
-        patch.status['state'] = "seeded"
-        patch.spec['duration'] = str(duration)
+        utils.setStatusFields('seed_roles_handler', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
-        patch.status['state'] = "failed"
+        utils.setStatusFields('seed_roles_handler', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 

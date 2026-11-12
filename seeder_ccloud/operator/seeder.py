@@ -15,6 +15,7 @@
 """
 import asyncio
 import threading
+import os
 import kopf
 import logging
 from kubernetes import config as k8s_config
@@ -42,7 +43,9 @@ def startup(settings: kopf.OperatorSettings, **kwargs):
         #settings.admission.server.host = 'seeder-ccloud.qa-de-1.cloud.sap'
     except k8s_config.ConfigException:
         k8s_config.load_incluster_config()
+        namespace = os.environ.get('POD_NAMESPACE', 'monsoon3')
         settings.admission.server = kopf.WebhookServer(addr='0.0.0.0', port=80, insecure=True)
+        settings.admission.server.host = 'ccloud-seeder.{}.svc.cluster.local'.format(namespace)
 
     logging.info('starting operator with {} workers and crd {}'.format(int(args.max_workers), config.crd_info))
     settings.execution.max_workers = int(args.max_workers)
