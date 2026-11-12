@@ -53,3 +53,4 @@ class Traits():
                 self.openstack.get_placementclient().request('PUT', '/traits/{}'.format(trait))
         except Exception as e:
             logging.error("Failed to seed trait %s: %s" % (trait, e))
+            raise

@@ -53,8 +53,8 @@ class Users():
         keystone = self.openstack.get_keystoneclient()
 
         if '@' in user['name']:
-            user, domain_name = user['name'].split('@')
-            user['name'] = user
+            username, domain_name = user['name'].split('@')
+            user['name'] = username
             # throws exception when domain does not exist
             domain_id = self.openstack.get_domain_id(domain_name)
         else:

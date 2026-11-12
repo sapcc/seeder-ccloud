@@ -27,7 +27,7 @@ class OpenstackHelper:
         if not cls._singleton:
             cls._singleton = super(OpenstackHelper, cls).__new__(cls)
             cls.args = args
-            cls.id_cache = TTLCache(maxsize=5000, ttl=timedelta(days=30), timer=datetime.now)
+            cls.id_cache = TTLCache(maxsize=5000, ttl=timedelta(hours=4), timer=datetime.now)
             cls.client_cache = TTLCache(maxsize=10, ttl=timedelta(minutes=5), timer=datetime.now)
 
         return cls._singleton
@@ -54,21 +54,21 @@ class OpenstackHelper:
                                  endpoint_type=self.args.interface + 'URL')
 
     
-    @cachedmethod(operator.attrgetter('client_cache'), partial(hashkey, 'cinder'))
+    @cachedmethod(operator.attrgetter('client_cache'), lambda self, api_version='3.50': hashkey('cinder', api_version))
     def get_cinderclient(self, api_version='3.50'):
         session = self.get_session(self.args)
-        return cinderclient.Client(session=session, 
+        return cinderclient.Client(session=session,
                                    interface=self.args.interface, api_version=api_version)
 
-                            
-    @cachedmethod(operator.attrgetter('client_cache'), partial(hashkey, 'manila'))
+
+    @cachedmethod(operator.attrgetter('client_cache'), lambda self, api_version='2.40': hashkey('manila', api_version))
     def get_manilaclient(self, api_version='2.40'):
         session = self.get_session(self.args)
         api_version = api_versions.APIVersion(api_version)
         return manilaclient.Client(session=session, api_version=api_version)
 
-    
-    @cachedmethod(operator.attrgetter('client_cache'), partial(hashkey, 'placement'))
+
+    @cachedmethod(operator.attrgetter('client_cache'), lambda self, api_version='1.6': hashkey('placement', api_version))
     def get_placementclient(self, api_version='1.6'):
         session = self.get_session(self.args)
         ks_filter = {'service_type': 'placement', 'interface': self.args.interface}
@@ -86,7 +86,8 @@ class OpenstackHelper:
         plugin = cli.load_from_argparse_arguments(designate_args)
         sess = session.Session(auth=plugin,
                             user_agent='openstack-seeder',
-                            verify=not self.args.insecure)
+                            verify=not self.args.insecure,
+                            timeout=30)
 
         return designateclient.Client(session=sess,
                                         endpoint_type=self.args.interface + 'URL',
@@ -219,4 +220,5 @@ class OpenstackHelper:
         plugin = cli.load_from_argparse_arguments(args)
         return session.Session(auth=plugin,
                             user_agent='openstack-seeder',
-                            verify=not args.insecure)
+                            verify=not args.insecure,
+                            timeout=30)

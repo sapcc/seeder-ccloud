@@ -15,6 +15,7 @@
 """
 
 import kopf, logging
+from keystoneclient import exceptions
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
 from deepdiff import DeepDiff
@@ -70,7 +71,7 @@ class Regions():
 
         try:
             result = self.openstack.get_keystoneclient().regions.get(region['id'])
-        except self.openstack.get_keystoneclient().exception.NotFound:
+        except exceptions.NotFound:
             result = None
 
         if not result:
