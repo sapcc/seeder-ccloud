@@ -14,7 +14,8 @@
  limitations under the License.
 """
 
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 
@@ -32,15 +33,19 @@ def validate_volume_types(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.volume_types')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.volume_types')
-def seed_volume_types_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_volume_types_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} volume_types'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Volume_Types(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('volume_types', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('volume_types', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 

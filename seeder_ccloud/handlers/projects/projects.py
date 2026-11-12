@@ -13,7 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 from keystoneclient import exceptions
 from keystoneauth1 import exceptions as keystoneauthexceptions
 from designateclient.v2 import client as designateclient
@@ -33,14 +34,18 @@ def validate(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.projects')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.projects')
-def seed_projects_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_projects_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} projects'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Projects(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('projects', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('projects', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 

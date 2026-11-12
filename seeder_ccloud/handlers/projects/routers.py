@@ -13,7 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 import re
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -30,14 +31,18 @@ def validate(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.routers')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.routers')
-def seed_routers_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_routers_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} routers'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Routers(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('routers', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('routers', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
