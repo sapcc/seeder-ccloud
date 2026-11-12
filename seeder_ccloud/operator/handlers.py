@@ -6,6 +6,8 @@ from kubernetes import client
 from kubernetes.client.rest import ApiException
 from kopf._cogs.structs import bodies
 
+RETRY_INTERVAL = 600  # retry failed seeds every 10 minutes
+
 class Handlers():
 
     def __init__(self, operator_storage):
@@ -40,6 +42,22 @@ class Handlers():
                 patch.status['state'] = "error"
                 raise kopf.TemporaryError('{}'.format(error), delay=30)
                 
+        @kopf.on.timer(
+            self.config.crd_info['plural'],
+            annotations={'operatorVersion': self.config.operator_version},
+            interval=RETRY_INTERVAL, idle=RETRY_INTERVAL)
+        def retry_failed(status, name, annotations, body, patch, **kwargs):
+            if status.get('state') != 'failed':
+                return
+            logging.info('retrying failed seed {}'.format(name))
+            # Clear all progress annotations so kopf re-runs all handlers.
+            # The API patch is built up by kopf from the returned patch object;
+            # we remove progress keys by setting them to None.
+            prefix = self.config.prefix + '/'
+            for key in list((body.get('metadata') or {}).get('annotations', {}).keys()):
+                if key.startswith(prefix) and key != prefix + 'last-applied-configuration':
+                    patch.metadata.annotations[key] = None
+
         for handler in self.config.handlers:
             logging.info('loading handler: seeder_ccloud.handlers.{}'.format(handler))
             importlib.import_module('seeder_ccloud.handlers.{}'.format(handler))
