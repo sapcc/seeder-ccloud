@@ -4,6 +4,10 @@ ccloud_seeder:
     tag: latest
   domainPrefix: ccloud-seeder
 
+webhookInjector:
+  repository: keppel.global.cloud.sap/ccloud-ghcr-io-mirror/sap-cloud-infrastructure/webhook-injector
+  tag: sha-bb2f978ca889e1da27c33faba3fe78b1b1dfd221
+
 operator:
   dry_run: true
   log_level: INFO
