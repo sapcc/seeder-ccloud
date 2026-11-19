@@ -38,14 +38,15 @@ def startup(settings: kopf.OperatorSettings, **kwargs):
     try:
         k8s_config.load_kube_config()
         settings.admission.server = kopf.WebhookNgrokTunnel(port=88)
-        settings.admission.server = kopf.WebhookServer(addr='0.0.0.0', port=80, insecure=True)
-        settings.admission.server.insecure = False
-        #settings.admission.managed = 'seeder.cloud.sap'
-        #settings.admission.server.host = 'seeder-ccloud.qa-de-1.cloud.sap'
     except k8s_config.ConfigException:
         k8s_config.load_incluster_config()
         namespace = os.environ.get('POD_NAMESPACE', 'monsoon3')
-        settings.admission.server = kopf.WebhookServer(addr='0.0.0.0', port=80, insecure=True)
+        settings.admission.server = kopf.WebhookServer(
+            addr='0.0.0.0',
+            port=443,
+            certfile='/tmp/webhook-certs/tls.crt',
+            pkeyfile='/tmp/webhook-certs/tls.key',
+        )
         settings.admission.server.host = 'ccloud-seeder.{}.svc.cluster.local'.format(namespace)
 
     logging.info('starting operator with {} workers and crd {}'.format(int(args.max_workers), config.crd_info))

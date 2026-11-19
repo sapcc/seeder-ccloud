@@ -26,6 +26,22 @@ spec:
     spec:
       serviceAccount: ccloud-seeder
       serviceAccountName: ccloud-seeder
+      initContainers:
+      - name: webhook-injector
+        image: "{{ .Values.webhookInjector.repository }}:{{ .Values.webhookInjector.tag }}"
+        restartPolicy: Always
+        args:
+          - --webhook-config-name=ccloud-seeder-webhook
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: 8083
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+          - name: webhook-certs
+            mountPath: /tmp/webhook-certs
       containers:
       - name: operator
         image: "{{ .Values.global.registry }}/{{ .Values.ccloud_seeder.image.name }}:{{ .Values.ccloud_seeder.image.tag }}"
@@ -41,8 +57,11 @@ spec:
           - name: config
             mountPath: /etc/operator
             readOnly: true
+          - name: webhook-certs
+            mountPath: /tmp/webhook-certs
+            readOnly: true
         ports:
-          - containerPort: 80
+          - containerPort: 443
             name: webhook
         env:
         - name: OS_AUTH_TYPE
@@ -100,3 +119,5 @@ spec:
         configMap:
           defaultMode: 420
           name: ccloud-seeder
+      - name: webhook-certs
+        emptyDir: {}

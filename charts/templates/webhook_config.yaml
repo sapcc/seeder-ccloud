@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ccloud-seeder-webhook
+  labels:
+    app: ccloud-seeder
+    release: {{ .Release.Name }}
+data:
+  webhooks.yaml: |
+    apiVersion: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    metadata:
+      name: {{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
+    webhooks:
+    - admissionReviewVersions:
+      - v1
+      - v1beta1
+      clientConfig:
+        caBundle: ""
+        service:
+          name: ccloud-seeder
+          namespace: {{ .Release.Namespace }}
+          path: /validate_domains/spec.openstack.domains
+          port: 443
+      failurePolicy: Fail
+      matchPolicy: Equivalent
+      name: validate-domains.spec.openstack.domains.{{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
+      namespaceSelector: {}
+      objectSelector: {}
+      rules:
+      - apiGroups:
+        - seeder.cloud.sap
+        apiVersions:
+        - v1
+        operations:
+        - '*'
+        resources:
+        - ccloudseeds
+        scope: '*'
+      sideEffects: None
+      timeoutSeconds: 30
+    - admissionReviewVersions:
+      - v1
+      - v1beta1
+      clientConfig:
+        caBundle: ""
+        service:
+          name: ccloud-seeder
+          namespace: {{ .Release.Namespace }}
+          path: /validate_networks/spec.openstack.networks
+          port: 443
+      failurePolicy: Fail
+      matchPolicy: Equivalent
+      name: validate-networks.spec.openstack.networks.{{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
+      namespaceSelector: {}
+      objectSelector: {}
+      rules:
+      - apiGroups:
+        - seeder.cloud.sap
+        apiVersions:
+        - v1
+        operations:
+        - '*'
+        resources:
+        - ccloudseeds
+        scope: '*'
+      sideEffects: None
+      timeoutSeconds: 30
+    - admissionReviewVersions:
+      - v1
+      - v1beta1
+      clientConfig:
+        caBundle: ""
+        service:
+          name: ccloud-seeder
+          namespace: {{ .Release.Namespace }}
+          path: /validate_networks/spec.openstack.address_scopes
+          port: 443
+      failurePolicy: Fail
+      matchPolicy: Equivalent
+      name: validate-address-scopes.spec.openstack.address-scopes.{{ .Values.ccloud_seeder.domainPrefix }}.seeder.cloud.sap
+      namespaceSelector: {}
+      objectSelector: {}
+      rules:
+      - apiGroups:
+        - seeder.cloud.sap
+        apiVersions:
+        - v1
+        operations:
+        - '*'
+        resources:
+        - ccloudseeds
+        scope: '*'
+      sideEffects: None
+      timeoutSeconds: 30
