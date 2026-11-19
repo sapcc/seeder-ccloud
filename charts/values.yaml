@@ -5,7 +5,7 @@ ccloud_seeder:
   domainPrefix: ccloud-seeder
 
 webhookInjector:
-  repository: keppel.global.cloud.sap/i-cant-believe-its-not-cloud-infrastructure-dev/webhook-injector
+  repository: keppel.global.cloud.sap/ccloud-ghcr-io-mirror/sap-cloud-infrastructure/webhook-injector
   tag: sha-bb2f978ca889e1da27c33faba3fe78b1b1dfd221
 
 operator:
