@@ -14,7 +14,8 @@
  limitations under the License.
 """
 
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 from keystoneclient import exceptions
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -33,15 +34,19 @@ def validate_role_inferences(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_inferences')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.role_inferences')
-def seed_role_inferences_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_role_inferences_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} role_inferences'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
 
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Role_Inferences(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('role_inferences', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('role_inferences', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 

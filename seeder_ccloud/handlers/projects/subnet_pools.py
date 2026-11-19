@@ -13,7 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 from typing import List
 from seeder_ccloud import utils
 from deepdiff import DeepDiff
@@ -44,14 +45,18 @@ def validate(memo: kopf.Memo, dryrun, spec, old, warnings: List[str], **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.subnet_pools')
-def seed_subnet_pools_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_subnet_pools_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.debug(f"seeding {name} subnet_pools")
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError(f"error seeding {name}: dependencies error", delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Subnet_Pools(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('subnet_pools', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('subnet_pools', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
 
 

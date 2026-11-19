@@ -13,7 +13,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging, kopf
+import logging, kopf, time
+from datetime import timedelta
 from typing import List
 from seeder_ccloud import utils
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
@@ -58,7 +59,7 @@ def validate_address_scopes(memo: kopf.Memo, dryrun, spec, old,
 @kopf.on.create(config.crd_info['plural'],
                 annotations={'operatorVersion': config.operator_version},
                 field='spec.openstack.address_scopes')
-def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, spec,
+def seed_address_scopes_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, spec,
                                 annotations, runtime, **_):
     logging.debug(f"seeding {name} address_scopes since {runtime}")
 
@@ -66,11 +67,15 @@ def seed_address_scopes_handler(memo: kopf.Memo, new, old, name, spec,
         raise kopf.TemporaryError(f"error seeding {name}: dependencies error",
                                   delay=30)
     try:
+        starttime = time.perf_counter()
         if 'openstack' not in spec or 'address_scopes' not in spec['openstack']:
             pass
         changed = utils.get_changed_seeds(old, new)
         Address_Scopes(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('address_scopes', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('address_scopes', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError(f"error seeding {name}: {error}", delay=30)
 
 

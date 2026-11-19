@@ -137,8 +137,6 @@ def setStatusFields(handler: str, patch: kopf.Patch, state: str, status: dict = 
         if handler in existing:
             del existing[handler]
         patch.status['latest_error'] = json.dumps(existing) if existing else None
-    if diffs:
-        changes = {handler: sum([len(v) for v in diffs.values()])}
-        existing_changes = json.loads((status or {}).get('changes', '{}') or '{}')
-        existing_changes.update(changes)
-        patch.status['changes'] = json.dumps(existing_changes)
+    existing_changes = json.loads((status or {}).get('changes', '{}') or '{}')
+    existing_changes[handler] = sum([len(v) for v in diffs.values()]) if diffs else 0
+    patch.status['changes'] = json.dumps(existing_changes)

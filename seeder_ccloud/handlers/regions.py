@@ -14,7 +14,8 @@
  limitations under the License.
 """
 
-import kopf, logging
+import kopf, logging, time
+from datetime import timedelta
 from keystoneclient import exceptions
 from seeder_ccloud.openstack.openstack_helper import OpenstackHelper
 from seeder_ccloud import utils
@@ -32,14 +33,18 @@ def validate_regions(spec, dryrun, **_):
 
 @kopf.on.update(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.regions')
 @kopf.on.create(config.crd_info['plural'], annotations={'operatorVersion': config.operator_version}, field='spec.openstack.regions')
-def seed_regions_handler(memo: kopf.Memo, new, old, name, annotations, **_):
+def seed_regions_handler(memo: kopf.Memo, patch: kopf.Patch, status: kopf.Status, new, old, name, annotations, **_):
     logging.info('seeding {} regions'.format(name))
     if not config.is_dependency_successful(annotations):
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, 'dependencies error'), delay=30)
     try:
+        starttime = time.perf_counter()
         changed = utils.get_changed_seeds(old, new)
         Regions(memo['args'], memo['dry_run']).seed(changed)
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        utils.setStatusFields('regions', patch, 'seeded', status=status, duration=duration)
     except Exception as error:
+        utils.setStatusFields('regions', patch, 'failed', status=status, latest_error=str(error))
         raise kopf.TemporaryError('error seeding {}: {}'.format(name, error), delay=30)
 
 
